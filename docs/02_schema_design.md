@@ -113,7 +113,7 @@ for each product at a store.
 | packed_at | TIMESTAMPTZ | Optional packing instant |
 | picked_up_at | TIMESTAMPTZ | Optional pickup instant |
 | delivered_at | TIMESTAMPTZ | Optional delivery instant |
-| promised_minutes | INTEGER | NN; positive SLA duration |
+| promised_minutes | INTEGER | NN, DEFAULT 10; positive SLA duration (10-minute promise) |
 | subtotal | NUMERIC(12,2) | NN; nonnegative order subtotal |
 | delivery_fee | NUMERIC(12,2) | NN; nonnegative fee |
 | handling_fee | NUMERIC(12,2) | NN; nonnegative fee |

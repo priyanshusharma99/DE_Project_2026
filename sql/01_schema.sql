@@ -95,7 +95,7 @@ CREATE TABLE orders (
     packed_at TIMESTAMPTZ,
     picked_up_at TIMESTAMPTZ,
     delivered_at TIMESTAMPTZ,
-    promised_minutes INTEGER NOT NULL,
+    promised_minutes INTEGER NOT NULL DEFAULT 10,
     subtotal NUMERIC(12,2) NOT NULL,
     delivery_fee NUMERIC(12,2) NOT NULL,
     handling_fee NUMERIC(12,2) NOT NULL,
