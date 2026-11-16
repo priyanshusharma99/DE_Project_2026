@@ -22,12 +22,12 @@
 
 | Role | Name | Enrollment No. | GitHub Username |
 |------|------|----------------|-----------------|
-| Group Lead | | | |
-| Member 2 | | | |
-| Member 3 | | | |
-| Member 4 | | | |
+| Group Lead | Priyanshu Sharma| 2501010358| priyanshusharma99|
+| Member 2 | Manjeet Lodha| 25010259| Manjeet-cse|
+| Member 3 | Anurag Sonawane| 2501010561| Anurag-Sonawane|
+| Member 4 | Srijal Srivastava| 2501010457| Srijal-SS|
 
-**Team No.:** ____ · **Section:** ____ · **Repository URL:** ____
+**Team No.:** T0013 · **Section:** ____ · **Repository URL:** https://github.com/priyanshusharma99/DE_Project_2026.git
 
 ---
 
