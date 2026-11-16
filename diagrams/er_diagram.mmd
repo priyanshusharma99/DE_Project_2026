@@ -1,0 +1,113 @@
+erDiagram
+    cities ||--o{ dark_stores : contains
+    cities ||--o{ customers : contains
+    categories ||--o{ products : classifies
+    dark_stores ||--o{ riders : assigns
+    dark_stores ||--o{ store_inventory : holds
+    products ||--o{ store_inventory : stocked_in
+    customers ||--o{ orders : places
+    dark_stores ||--o{ orders : serves
+    riders |o--o{ orders : delivers
+    orders ||--o{ order_items : contains
+    products ||--o{ order_items : ordered_as
+    products |o--o{ order_items : substitute_for
+    store_inventory ||--o{ inventory_movements : tracks
+
+    cities {
+        integer city_id PK
+        text city_name
+        text state
+    }
+
+    categories {
+        integer category_id PK
+        text category_name UK
+        boolean is_perishable
+    }
+
+    dark_stores {
+        integer store_id PK
+        text store_code UK
+        integer city_id FK
+        numeric latitude
+        numeric longitude
+        date opened_on
+        boolean is_active
+        integer max_daily_orders
+    }
+
+    products {
+        integer product_id PK
+        text sku UK
+        text product_name
+        text brand
+        integer category_id FK
+        text pack_size
+        numeric mrp
+        integer shelf_life_days
+        boolean is_active
+    }
+
+    customers {
+        integer customer_id PK
+        text full_name
+        text phone UK
+        text email UK
+        integer city_id FK
+        timestamptz created_at
+    }
+
+    riders {
+        integer rider_id PK
+        text full_name
+        text phone UK
+        integer store_id FK
+        date joined_on
+        text status
+    }
+
+    store_inventory {
+        integer store_id PK
+        integer product_id PK
+        integer quantity_on_hand
+        integer reorder_level
+        numeric selling_price
+        timestamptz updated_at
+    }
+
+    orders {
+        integer order_id PK
+        integer customer_id FK
+        integer store_id FK
+        integer rider_id FK
+        timestamptz placed_at
+        timestamptz packed_at
+        timestamptz picked_up_at
+        timestamptz delivered_at
+        integer promised_minutes
+        numeric subtotal
+        numeric delivery_fee
+        numeric handling_fee
+        numeric small_cart_fee
+        numeric total_amount
+        text payment_method
+        text status
+    }
+
+    order_items {
+        integer order_id PK
+        integer product_id PK
+        integer quantity_ordered
+        integer quantity_delivered
+        numeric unit_price
+        integer substitute_product_id FK
+    }
+
+    inventory_movements {
+        integer movement_id PK
+        integer store_id FK
+        integer product_id FK
+        text movement_type
+        integer quantity
+        timestamptz moved_at
+    }
