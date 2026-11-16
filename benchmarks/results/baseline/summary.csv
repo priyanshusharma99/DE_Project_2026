@@ -1,0 +1,31 @@
+query_id,type,avg_ms,median_ms,min_ms,max_ms,scan_nodes
+R01,READ,0.243,0.246,0.224,0.259,Seq Scan on dark_stores
+R02,READ,1.108,1.007,0.785,1.532,Seq Scan on products | Seq Scan on categories | Index Scan using store_inventory_pkey on store_inventory
+R03,READ,1.577,1.670,1.020,2.041,Seq Scan on products | Index Scan using store_inventory_pkey on store_inventory
+R04,READ,0.454,0.392,0.231,0.740,Seq Scan on dark_stores | Index Scan using store_inventory_pkey on store_inventory
+R05,READ,0.125,0.120,0.111,0.145,Index Scan using store_inventory_pkey on store_inventory
+R06,READ,12.113,9.547,7.976,18.815,Seq Scan on orders
+R07,READ,10.117,9.747,9.267,11.338,Seq Scan on orders
+R08,READ,10.510,10.478,10.451,10.600,Seq Scan on orders
+R09,READ,0.543,0.631,0.244,0.753,Seq Scan on products | Bitmap Heap Scan on store_inventory | Bitmap Index Scan on store_inventory_pkey
+R10,READ,10.836,10.643,6.665,15.199,Seq Scan on inventory_movements | Seq Scan on products | Index Scan using categories_pkey on categories
+R11,READ,9.052,9.374,8.349,9.433,Seq Scan on orders
+R12,READ,11.567,10.582,10.420,13.699,Seq Scan on order_items | Index Only Scan using order_items_pkey on order_items
+R13,READ,19.780,20.104,18.529,20.706,Seq Scan on products | Seq Scan on order_items | Seq Scan on orders
+R14,READ,17.155,17.204,16.869,17.391,Seq Scan on order_items | Seq Scan on orders
+R15,READ,8.034,7.980,7.905,8.216,Seq Scan on orders | Index Scan using dark_stores_pkey on dark_stores
+R16,READ,27.520,27.522,27.493,27.546,Seq Scan on orders
+R17,READ,27.575,27.579,27.469,27.676,Seq Scan on orders | Index Scan using dark_stores_pkey on dark_stores
+R18,READ,5.212,5.205,5.160,5.272,Seq Scan on orders | Index Only Scan using order_items_pkey on order_items | Bitmap Heap Scan on store_inventory | Bitmap Index Scan on store_inventory_pkey | Seq Scan on products
+R19,READ,1740.334,1729.766,1702.644,1788.591,Seq Scan on categories | Seq Scan on products | Seq Scan on order_items | Index Scan using orders_pkey on orders
+R20,READ,9.239,9.354,8.839,9.525,Seq Scan on orders
+R21,READ,5.083,5.106,4.926,5.218,Seq Scan on orders | Seq Scan on riders
+R22,READ,32.452,32.153,31.712,33.491,Seq Scan on orders
+R23,READ,0.028,0.026,0.024,0.034,Index Scan using products_sku_key on products
+R24,READ,4.611,4.497,4.332,5.004,Seq Scan on inventory_movements
+R25,READ,17.128,16.636,15.374,19.374,Seq Scan on orders | Seq Scan on customers
+W01,WRITE,0.472,0.435,0.432,0.549,(no scan)
+W02,WRITE,13.455,13.313,12.689,14.362,Seq Scan on orders | Index Scan using order_items_pkey on order_items | Index Scan using store_inventory_pkey on store_inventory
+W03,WRITE,12.750,12.825,11.896,13.530,Index Scan using orders_pkey on orders | Index Scan using riders_pkey on riders
+W04,WRITE,0.752,0.506,0.490,1.260,Bitmap Heap Scan on store_inventory | Bitmap Index Scan on store_inventory_pkey
+W05,WRITE,21.555,20.803,13.260,30.602,Seq Scan on inventory_movements
