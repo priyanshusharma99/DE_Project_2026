@@ -1,0 +1,147 @@
+=== R19 run 1 ===
+Sort  (cost=13452.90..13456.65 rows=1500 width=36) (actual time=15.688..16.402 rows=125.00 loops=1)
+  Sort Key: (COALESCE(sum(oi.quantity_delivered), '0'::bigint)) DESC
+  Sort Method: quicksort  Memory: 31kB
+  Buffers: shared hit=4799
+  ->  HashAggregate  (cost=13358.77..13373.77 rows=1500 width=36) (actual time=15.661..16.384 rows=125.00 loops=1)
+        Group Key: p.product_id
+        Batches: 1  Memory Usage: 65kB
+        Buffers: shared hit=4796
+        ->  Hash Right Join  (cost=1524.70..13343.10 rows=3133 width=32) (actual time=13.179..16.190 rows=3112.00 loops=1)
+              Hash Cond: (oi.product_id = p.product_id)
+              Buffers: shared hit=4796
+              ->  Gather  (cost=1493.92..13140.03 rows=37593 width=8) (actual time=13.133..15.036 rows=37086.00 loops=1)
+                    Workers Planned: 2
+                    Workers Launched: 2
+                    Buffers: shared hit=4773
+                    ->  Hash Join  (cost=493.93..8380.73 rows=15664 width=8) (actual time=11.685..12.872 rows=12362.00 loops=3)
+                          Hash Cond: (oi.order_id = o.order_id)
+                          Buffers: shared hit=4773
+                          ->  Parallel Seq Scan on order_items oi  (cost=0.00..7148.50 rows=281250 width=12) (actual time=0.003..5.498 rows=225000.00 loops=3)
+                                Buffers: shared hit=4336
+                          ->  Hash  (cost=389.50..389.50 rows=8354 width=4) (actual time=0.838..0.838 rows=8241.00 loops=3)
+                                Buckets: 16384  Batches: 1  Memory Usage: 418kB
+                                Buffers: shared hit=437
+                                ->  Index Scan using idx_orders_placed_at on orders o  (cost=0.42..389.50 rows=8354 width=4) (actual time=0.009..0.490 rows=8241.00 loops=3)
+                                      Index Cond: ((placed_at >= '2026-05-31 11:30:00-07'::timestamp with time zone) AND (placed_at < '2026-06-30 11:30:00-07'::timestamp with time zone))
+                                      Index Searches: 3
+                                      Buffers: shared hit=437
+              ->  Hash  (cost=29.21..29.21 rows=125 width=28) (actual time=0.042..0.042 rows=125.00 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 16kB
+                    Buffers: shared hit=23
+                    ->  Nested Loop  (cost=5.25..29.21 rows=125 width=28) (actual time=0.012..0.035 rows=125.00 loops=1)
+                          Buffers: shared hit=23
+                          ->  Seq Scan on categories c  (cost=0.00..1.15 rows=1 width=4) (actual time=0.002..0.003 rows=1.00 loops=1)
+                                Filter: (category_name = 'Fruits & Vegetables'::text)
+                                Rows Removed by Filter: 11
+                                Buffers: shared hit=1
+                          ->  Bitmap Heap Scan on products p  (cost=5.25..26.81 rows=125 width=32) (actual time=0.010..0.027 rows=125.00 loops=1)
+                                Recheck Cond: (category_id = c.category_id)
+                                Heap Blocks: exact=20
+                                Buffers: shared hit=22
+                                ->  Bitmap Index Scan on idx_products_category_id  (cost=0.00..5.21 rows=125 width=0) (actual time=0.005..0.005 rows=125.00 loops=1)
+                                      Index Cond: (category_id = c.category_id)
+                                      Index Searches: 1
+                                      Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=468
+Planning Time: 0.674 ms
+Execution Time: 16.457 ms
+=== R19 run 2 ===
+Sort  (cost=13452.90..13456.65 rows=1500 width=36) (actual time=15.658..16.383 rows=125.00 loops=1)
+  Sort Key: (COALESCE(sum(oi.quantity_delivered), '0'::bigint)) DESC
+  Sort Method: quicksort  Memory: 31kB
+  Buffers: shared hit=4799
+  ->  HashAggregate  (cost=13358.77..13373.77 rows=1500 width=36) (actual time=15.632..16.365 rows=125.00 loops=1)
+        Group Key: p.product_id
+        Batches: 1  Memory Usage: 65kB
+        Buffers: shared hit=4796
+        ->  Hash Right Join  (cost=1524.70..13343.10 rows=3133 width=32) (actual time=13.124..16.179 rows=3112.00 loops=1)
+              Hash Cond: (oi.product_id = p.product_id)
+              Buffers: shared hit=4796
+              ->  Gather  (cost=1493.92..13140.03 rows=37593 width=8) (actual time=13.078..15.041 rows=37086.00 loops=1)
+                    Workers Planned: 2
+                    Workers Launched: 2
+                    Buffers: shared hit=4773
+                    ->  Hash Join  (cost=493.93..8380.73 rows=15664 width=8) (actual time=11.607..12.769 rows=12362.00 loops=3)
+                          Hash Cond: (oi.order_id = o.order_id)
+                          Buffers: shared hit=4773
+                          ->  Parallel Seq Scan on order_items oi  (cost=0.00..7148.50 rows=281250 width=12) (actual time=0.004..5.463 rows=225000.00 loops=3)
+                                Buffers: shared hit=4336
+                          ->  Hash  (cost=389.50..389.50 rows=8354 width=4) (actual time=0.801..0.801 rows=8241.00 loops=3)
+                                Buckets: 16384  Batches: 1  Memory Usage: 418kB
+                                Buffers: shared hit=437
+                                ->  Index Scan using idx_orders_placed_at on orders o  (cost=0.42..389.50 rows=8354 width=4) (actual time=0.009..0.484 rows=8241.00 loops=3)
+                                      Index Cond: ((placed_at >= '2026-05-31 11:30:00-07'::timestamp with time zone) AND (placed_at < '2026-06-30 11:30:00-07'::timestamp with time zone))
+                                      Index Searches: 3
+                                      Buffers: shared hit=437
+              ->  Hash  (cost=29.21..29.21 rows=125 width=28) (actual time=0.041..0.041 rows=125.00 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 16kB
+                    Buffers: shared hit=23
+                    ->  Nested Loop  (cost=5.25..29.21 rows=125 width=28) (actual time=0.013..0.035 rows=125.00 loops=1)
+                          Buffers: shared hit=23
+                          ->  Seq Scan on categories c  (cost=0.00..1.15 rows=1 width=4) (actual time=0.002..0.002 rows=1.00 loops=1)
+                                Filter: (category_name = 'Fruits & Vegetables'::text)
+                                Rows Removed by Filter: 11
+                                Buffers: shared hit=1
+                          ->  Bitmap Heap Scan on products p  (cost=5.25..26.81 rows=125 width=32) (actual time=0.010..0.026 rows=125.00 loops=1)
+                                Recheck Cond: (category_id = c.category_id)
+                                Heap Blocks: exact=20
+                                Buffers: shared hit=22
+                                ->  Bitmap Index Scan on idx_products_category_id  (cost=0.00..5.21 rows=125 width=0) (actual time=0.005..0.005 rows=125.00 loops=1)
+                                      Index Cond: (category_id = c.category_id)
+                                      Index Searches: 1
+                                      Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=468
+Planning Time: 0.634 ms
+Execution Time: 16.434 ms
+=== R19 run 3 ===
+Sort  (cost=13452.90..13456.65 rows=1500 width=36) (actual time=15.523..16.257 rows=125.00 loops=1)
+  Sort Key: (COALESCE(sum(oi.quantity_delivered), '0'::bigint)) DESC
+  Sort Method: quicksort  Memory: 31kB
+  Buffers: shared hit=4799
+  ->  HashAggregate  (cost=13358.77..13373.77 rows=1500 width=36) (actual time=15.497..16.238 rows=125.00 loops=1)
+        Group Key: p.product_id
+        Batches: 1  Memory Usage: 65kB
+        Buffers: shared hit=4796
+        ->  Hash Right Join  (cost=1524.70..13343.10 rows=3133 width=32) (actual time=13.058..16.047 rows=3112.00 loops=1)
+              Hash Cond: (oi.product_id = p.product_id)
+              Buffers: shared hit=4796
+              ->  Gather  (cost=1493.92..13140.03 rows=37593 width=8) (actual time=13.011..14.881 rows=37086.00 loops=1)
+                    Workers Planned: 2
+                    Workers Launched: 2
+                    Buffers: shared hit=4773
+                    ->  Hash Join  (cost=493.93..8380.73 rows=15664 width=8) (actual time=11.682..12.882 rows=12362.00 loops=3)
+                          Hash Cond: (oi.order_id = o.order_id)
+                          Buffers: shared hit=4773
+                          ->  Parallel Seq Scan on order_items oi  (cost=0.00..7148.50 rows=281250 width=12) (actual time=0.004..5.456 rows=225000.00 loops=3)
+                                Buffers: shared hit=4336
+                          ->  Hash  (cost=389.50..389.50 rows=8354 width=4) (actual time=0.841..0.841 rows=8241.00 loops=3)
+                                Buckets: 16384  Batches: 1  Memory Usage: 418kB
+                                Buffers: shared hit=437
+                                ->  Index Scan using idx_orders_placed_at on orders o  (cost=0.42..389.50 rows=8354 width=4) (actual time=0.009..0.500 rows=8241.00 loops=3)
+                                      Index Cond: ((placed_at >= '2026-05-31 11:30:00-07'::timestamp with time zone) AND (placed_at < '2026-06-30 11:30:00-07'::timestamp with time zone))
+                                      Index Searches: 3
+                                      Buffers: shared hit=437
+              ->  Hash  (cost=29.21..29.21 rows=125 width=28) (actual time=0.042..0.042 rows=125.00 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 16kB
+                    Buffers: shared hit=23
+                    ->  Nested Loop  (cost=5.25..29.21 rows=125 width=28) (actual time=0.011..0.034 rows=125.00 loops=1)
+                          Buffers: shared hit=23
+                          ->  Seq Scan on categories c  (cost=0.00..1.15 rows=1 width=4) (actual time=0.002..0.002 rows=1.00 loops=1)
+                                Filter: (category_name = 'Fruits & Vegetables'::text)
+                                Rows Removed by Filter: 11
+                                Buffers: shared hit=1
+                          ->  Bitmap Heap Scan on products p  (cost=5.25..26.81 rows=125 width=32) (actual time=0.009..0.026 rows=125.00 loops=1)
+                                Recheck Cond: (category_id = c.category_id)
+                                Heap Blocks: exact=20
+                                Buffers: shared hit=22
+                                ->  Bitmap Index Scan on idx_products_category_id  (cost=0.00..5.21 rows=125 width=0) (actual time=0.005..0.005 rows=125.00 loops=1)
+                                      Index Cond: (category_id = c.category_id)
+                                      Index Searches: 1
+                                      Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=468
+Planning Time: 0.675 ms
+Execution Time: 16.309 ms

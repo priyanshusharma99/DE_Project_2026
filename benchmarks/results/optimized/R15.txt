@@ -1,0 +1,78 @@
+=== R15 run 1 ===
+GroupAggregate  (cost=22.56..23.53 rows=43 width=44) (actual time=0.070..0.075 rows=37.00 loops=1)
+  Group Key: o.store_id, (EXTRACT(hour FROM o.placed_at))
+  Buffers: shared hit=17
+  ->  Sort  (cost=22.56..22.67 rows=43 width=36) (actual time=0.067..0.068 rows=38.00 loops=1)
+        Sort Key: o.store_id, (EXTRACT(hour FROM o.placed_at))
+        Sort Method: quicksort  Memory: 26kB
+        Buffers: shared hit=17
+        ->  Hash Join  (cost=4.16..21.40 rows=43 width=36) (actual time=0.022..0.049 rows=38.00 loops=1)
+              Hash Cond: (o.store_id = s.store_id)
+              Buffers: shared hit=11
+              ->  Index Scan using idx_orders_placed_at on orders o  (cost=0.42..16.82 rows=270 width=12) (actual time=0.003..0.017 rows=275.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-06-28 11:30:00-07'::timestamp with time zone) AND (placed_at < '2026-06-29 11:30:00-07'::timestamp with time zone))
+                    Index Searches: 1
+                    Buffers: shared hit=9
+              ->  Hash  (cost=3.50..3.50 rows=19 width=4) (actual time=0.009..0.009 rows=19.00 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                    Buffers: shared hit=2
+                    ->  Seq Scan on dark_stores s  (cost=0.00..3.50 rows=19 width=4) (actual time=0.003..0.007 rows=19.00 loops=1)
+                          Filter: (city_id = 1)
+                          Rows Removed by Filter: 101
+                          Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=311
+Planning Time: 0.426 ms
+Execution Time: 0.121 ms
+=== R15 run 2 ===
+GroupAggregate  (cost=22.56..23.53 rows=43 width=44) (actual time=0.063..0.068 rows=37.00 loops=1)
+  Group Key: o.store_id, (EXTRACT(hour FROM o.placed_at))
+  Buffers: shared hit=17
+  ->  Sort  (cost=22.56..22.67 rows=43 width=36) (actual time=0.061..0.062 rows=38.00 loops=1)
+        Sort Key: o.store_id, (EXTRACT(hour FROM o.placed_at))
+        Sort Method: quicksort  Memory: 26kB
+        Buffers: shared hit=17
+        ->  Hash Join  (cost=4.16..21.40 rows=43 width=36) (actual time=0.022..0.047 rows=38.00 loops=1)
+              Hash Cond: (o.store_id = s.store_id)
+              Buffers: shared hit=11
+              ->  Index Scan using idx_orders_placed_at on orders o  (cost=0.42..16.82 rows=270 width=12) (actual time=0.003..0.017 rows=275.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-06-28 11:30:00-07'::timestamp with time zone) AND (placed_at < '2026-06-29 11:30:00-07'::timestamp with time zone))
+                    Index Searches: 1
+                    Buffers: shared hit=9
+              ->  Hash  (cost=3.50..3.50 rows=19 width=4) (actual time=0.009..0.009 rows=19.00 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                    Buffers: shared hit=2
+                    ->  Seq Scan on dark_stores s  (cost=0.00..3.50 rows=19 width=4) (actual time=0.003..0.006 rows=19.00 loops=1)
+                          Filter: (city_id = 1)
+                          Rows Removed by Filter: 101
+                          Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=311
+Planning Time: 0.388 ms
+Execution Time: 0.109 ms
+=== R15 run 3 ===
+GroupAggregate  (cost=22.56..23.53 rows=43 width=44) (actual time=0.068..0.075 rows=37.00 loops=1)
+  Group Key: o.store_id, (EXTRACT(hour FROM o.placed_at))
+  Buffers: shared hit=17
+  ->  Sort  (cost=22.56..22.67 rows=43 width=36) (actual time=0.066..0.067 rows=38.00 loops=1)
+        Sort Key: o.store_id, (EXTRACT(hour FROM o.placed_at))
+        Sort Method: quicksort  Memory: 26kB
+        Buffers: shared hit=17
+        ->  Hash Join  (cost=4.16..21.40 rows=43 width=36) (actual time=0.023..0.050 rows=38.00 loops=1)
+              Hash Cond: (o.store_id = s.store_id)
+              Buffers: shared hit=11
+              ->  Index Scan using idx_orders_placed_at on orders o  (cost=0.42..16.82 rows=270 width=12) (actual time=0.003..0.018 rows=275.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-06-28 11:30:00-07'::timestamp with time zone) AND (placed_at < '2026-06-29 11:30:00-07'::timestamp with time zone))
+                    Index Searches: 1
+                    Buffers: shared hit=9
+              ->  Hash  (cost=3.50..3.50 rows=19 width=4) (actual time=0.009..0.009 rows=19.00 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                    Buffers: shared hit=2
+                    ->  Seq Scan on dark_stores s  (cost=0.00..3.50 rows=19 width=4) (actual time=0.004..0.007 rows=19.00 loops=1)
+                          Filter: (city_id = 1)
+                          Rows Removed by Filter: 101
+                          Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=311
+Planning Time: 0.386 ms
+Execution Time: 0.113 ms

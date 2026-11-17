@@ -1,0 +1,72 @@
+=== R03 run 1 ===
+Sort  (cost=288.50..288.55 rows=20 width=33) (actual time=0.102..0.102 rows=18.00 loops=1)
+  Sort Key: si.selling_price
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=108
+  ->  Nested Loop  (cost=13.43..288.07 rows=20 width=33) (actual time=0.027..0.086 rows=18.00 loops=1)
+        Buffers: shared hit=105
+        ->  Bitmap Heap Scan on products p  (cost=13.13..34.29 rows=31 width=28) (actual time=0.016..0.046 rows=31.00 loops=1)
+              Recheck Cond: (product_name ~~* '%milk%'::text)
+              Heap Blocks: exact=20
+              Buffers: shared hit=25
+              ->  Bitmap Index Scan on idx_products_name_trgm  (cost=0.00..13.12 rows=31 width=0) (actual time=0.010..0.011 rows=31.00 loops=1)
+                    Index Cond: (product_name ~~* '%milk%'::text)
+                    Index Searches: 1
+                    Buffers: shared hit=5
+        ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.29..8.19 rows=1 width=9) (actual time=0.001..0.001 rows=0.58 loops=31)
+              Index Cond: ((store_id = 43) AND (product_id = p.product_id))
+              Filter: (quantity_on_hand > 0)
+              Index Searches: 31
+              Buffers: shared hit=80
+Planning:
+  Buffers: shared hit=289
+Planning Time: 1.530 ms
+Execution Time: 0.147 ms
+=== R03 run 2 ===
+Sort  (cost=288.50..288.55 rows=20 width=33) (actual time=0.117..0.118 rows=18.00 loops=1)
+  Sort Key: si.selling_price
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=108
+  ->  Nested Loop  (cost=13.43..288.07 rows=20 width=33) (actual time=0.027..0.095 rows=18.00 loops=1)
+        Buffers: shared hit=105
+        ->  Bitmap Heap Scan on products p  (cost=13.13..34.29 rows=31 width=28) (actual time=0.017..0.052 rows=31.00 loops=1)
+              Recheck Cond: (product_name ~~* '%milk%'::text)
+              Heap Blocks: exact=20
+              Buffers: shared hit=25
+              ->  Bitmap Index Scan on idx_products_name_trgm  (cost=0.00..13.12 rows=31 width=0) (actual time=0.011..0.011 rows=31.00 loops=1)
+                    Index Cond: (product_name ~~* '%milk%'::text)
+                    Index Searches: 1
+                    Buffers: shared hit=5
+        ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.29..8.19 rows=1 width=9) (actual time=0.001..0.001 rows=0.58 loops=31)
+              Index Cond: ((store_id = 43) AND (product_id = p.product_id))
+              Filter: (quantity_on_hand > 0)
+              Index Searches: 31
+              Buffers: shared hit=80
+Planning:
+  Buffers: shared hit=289
+Planning Time: 0.885 ms
+Execution Time: 0.169 ms
+=== R03 run 3 ===
+Sort  (cost=288.50..288.55 rows=20 width=33) (actual time=0.096..0.097 rows=18.00 loops=1)
+  Sort Key: si.selling_price
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=108
+  ->  Nested Loop  (cost=13.43..288.07 rows=20 width=33) (actual time=0.024..0.080 rows=18.00 loops=1)
+        Buffers: shared hit=105
+        ->  Bitmap Heap Scan on products p  (cost=13.13..34.29 rows=31 width=28) (actual time=0.014..0.044 rows=31.00 loops=1)
+              Recheck Cond: (product_name ~~* '%milk%'::text)
+              Heap Blocks: exact=20
+              Buffers: shared hit=25
+              ->  Bitmap Index Scan on idx_products_name_trgm  (cost=0.00..13.12 rows=31 width=0) (actual time=0.009..0.009 rows=31.00 loops=1)
+                    Index Cond: (product_name ~~* '%milk%'::text)
+                    Index Searches: 1
+                    Buffers: shared hit=5
+        ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.29..8.19 rows=1 width=9) (actual time=0.001..0.001 rows=0.58 loops=31)
+              Index Cond: ((store_id = 43) AND (product_id = p.product_id))
+              Filter: (quantity_on_hand > 0)
+              Index Searches: 31
+              Buffers: shared hit=80
+Planning:
+  Buffers: shared hit=289
+Planning Time: 0.766 ms
+Execution Time: 0.140 ms

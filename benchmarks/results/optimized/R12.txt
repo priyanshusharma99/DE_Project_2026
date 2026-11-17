@@ -1,0 +1,87 @@
+=== R12 run 1 ===
+Limit  (cost=1945.67..1945.70 rows=10 width=12) (actual time=1.058..1.059 rows=10.00 loops=1)
+  Buffers: shared hit=1408
+  ->  Sort  (cost=1945.67..1949.42 rows=1500 width=12) (actual time=1.058..1.058 rows=10.00 loops=1)
+        Sort Key: (count(*)) DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=1408
+        ->  HashAggregate  (cost=1898.26..1913.26 rows=1500 width=12) (actual time=1.045..1.051 rows=23.00 loops=1)
+              Group Key: b.product_id
+              Batches: 1  Memory Usage: 65kB
+              Buffers: shared hit=1405
+              ->  Nested Loop  (cost=0.85..1887.12 rows=2229 width=4) (actual time=0.011..0.929 rows=2206.00 loops=1)
+                    Buffers: shared hit=1405
+                    ->  Index Only Scan using idx_order_items_product_order on order_items a  (cost=0.42..20.27 rows=448 width=8) (actual time=0.006..0.022 rows=466.00 loops=1)
+                          Index Cond: (product_id = 1236)
+                          Heap Fetches: 0
+                          Index Searches: 1
+                          Buffers: shared hit=6
+                    ->  Index Only Scan using order_items_pkey on order_items b  (cost=0.42..4.12 rows=5 width=8) (actual time=0.002..0.002 rows=4.73 loops=466)
+                          Index Cond: (order_id = a.order_id)
+                          Filter: (product_id <> a.product_id)
+                          Rows Removed by Filter: 1
+                          Heap Fetches: 0
+                          Index Searches: 466
+                          Buffers: shared hit=1399
+Planning:
+  Buffers: shared hit=152
+Planning Time: 0.340 ms
+Execution Time: 1.100 ms
+=== R12 run 2 ===
+Limit  (cost=1945.67..1945.70 rows=10 width=12) (actual time=0.968..0.969 rows=10.00 loops=1)
+  Buffers: shared hit=1408
+  ->  Sort  (cost=1945.67..1949.42 rows=1500 width=12) (actual time=0.968..0.968 rows=10.00 loops=1)
+        Sort Key: (count(*)) DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=1408
+        ->  HashAggregate  (cost=1898.26..1913.26 rows=1500 width=12) (actual time=0.956..0.961 rows=23.00 loops=1)
+              Group Key: b.product_id
+              Batches: 1  Memory Usage: 65kB
+              Buffers: shared hit=1405
+              ->  Nested Loop  (cost=0.85..1887.12 rows=2229 width=4) (actual time=0.011..0.855 rows=2206.00 loops=1)
+                    Buffers: shared hit=1405
+                    ->  Index Only Scan using idx_order_items_product_order on order_items a  (cost=0.42..20.27 rows=448 width=8) (actual time=0.006..0.021 rows=466.00 loops=1)
+                          Index Cond: (product_id = 1236)
+                          Heap Fetches: 0
+                          Index Searches: 1
+                          Buffers: shared hit=6
+                    ->  Index Only Scan using order_items_pkey on order_items b  (cost=0.42..4.12 rows=5 width=8) (actual time=0.001..0.002 rows=4.73 loops=466)
+                          Index Cond: (order_id = a.order_id)
+                          Filter: (product_id <> a.product_id)
+                          Rows Removed by Filter: 1
+                          Heap Fetches: 0
+                          Index Searches: 466
+                          Buffers: shared hit=1399
+Planning:
+  Buffers: shared hit=152
+Planning Time: 0.294 ms
+Execution Time: 1.007 ms
+=== R12 run 3 ===
+Limit  (cost=1945.67..1945.70 rows=10 width=12) (actual time=0.990..0.991 rows=10.00 loops=1)
+  Buffers: shared hit=1408
+  ->  Sort  (cost=1945.67..1949.42 rows=1500 width=12) (actual time=0.989..0.990 rows=10.00 loops=1)
+        Sort Key: (count(*)) DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=1408
+        ->  HashAggregate  (cost=1898.26..1913.26 rows=1500 width=12) (actual time=0.978..0.983 rows=23.00 loops=1)
+              Group Key: b.product_id
+              Batches: 1  Memory Usage: 65kB
+              Buffers: shared hit=1405
+              ->  Nested Loop  (cost=0.85..1887.12 rows=2229 width=4) (actual time=0.011..0.874 rows=2206.00 loops=1)
+                    Buffers: shared hit=1405
+                    ->  Index Only Scan using idx_order_items_product_order on order_items a  (cost=0.42..20.27 rows=448 width=8) (actual time=0.006..0.021 rows=466.00 loops=1)
+                          Index Cond: (product_id = 1236)
+                          Heap Fetches: 0
+                          Index Searches: 1
+                          Buffers: shared hit=6
+                    ->  Index Only Scan using order_items_pkey on order_items b  (cost=0.42..4.12 rows=5 width=8) (actual time=0.001..0.002 rows=4.73 loops=466)
+                          Index Cond: (order_id = a.order_id)
+                          Filter: (product_id <> a.product_id)
+                          Rows Removed by Filter: 1
+                          Heap Fetches: 0
+                          Index Searches: 466
+                          Buffers: shared hit=1399
+Planning:
+  Buffers: shared hit=152
+Planning Time: 0.290 ms
+Execution Time: 1.025 ms
