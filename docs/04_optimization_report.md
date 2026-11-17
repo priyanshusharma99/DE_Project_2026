@@ -271,3 +271,68 @@ Update on orders o  (cost=1.38..10.02 rows=0 width=0) (actual time=0.174..0.174 
 Execution Time: 0.265 ms
 ```
 
+
+---
+
+## 5. Write Overhead Analysis
+
+Indexing tables improves read performance but introduces maintenance overhead during `INSERT`, `UPDATE`, and `DELETE` operations as secondary index trees must be modified.
+
+| Write Query | Operation | Target Table | Baseline (ms) | Optimized (ms) | Delta (ms) | Change % | Overhead Analysis & Acceptability |
+|:---|:---|:---|---:|---:|---:|---:|:---|
+| **W01** | `INSERT` | `orders` | 0.472 | 0.575 | +0.103 | +21.8% | **Acceptable:** Inserting a row must now update 4 new secondary B-tree indexes. Total latency remains negligible at **0.58 ms**, well under the **5.0 ms** real-time threshold. |
+| **W02** | `UPDATE` | `store_inventory` | 13.455 | 0.182 | -13.273 | -98.6% | **Substantial Gain:** Subquery index eliminates a 150k sequential scan, overcoming any minute update overhead. |
+| **W03** | `UPDATE` | `orders` | 12.750 | 0.265 | -12.485 | -97.9% | **Substantial Gain:** The partial index `idx_orders_packing` eliminates 149k row checks; only active packing orders are indexed. |
+| **W04** | `UPDATE` | `store_inventory` | 0.752 | 0.695 | -0.057 | -7.6% | **Neutral / Fast:** Updates quantity and timestamp via primary key; no new secondary indexes were placed on inventory stock quantities. |
+| **W05** | `DELETE` | `inventory_movements` | 21.555 | 13.386 | -8.169 | -37.9% | **Net Improvement:** Index range scan quickly locates the 60,258 tuples to delete. The remaining runtime is the unavoidable I/O cost of page dirtying and WAL writes. |
+
+---
+
+## 6. Index Storage Overhead
+
+All 14 created indexes are listed below, measured using `pg_relation_size()` on PostgreSQL 18.6:
+
+| Table Name | Table Size | Index Name | Index Size | Ratio (% of Table) | Purpose & Queries Served |
+|:---|---:|:---|---:|---:|:---|
+| `order_items` | 34 MB | `idx_order_items_product_order` | 20 MB | 59.9% | Covering B-tree `(product_id, order_id)` for `R12`, `R18`, `R19` |
+| `order_items` | 34 MB | `idx_order_items_substitute` | 120 kB | 0.3% | Partial B-tree for non-null substitutes (`R13`) |
+| `orders` | 17 MB | `idx_orders_store_status_placed` | 5,968 kB | 33.8% | Composite B-tree for `R07`, `R11`, `W02` |
+| `orders` | 17 MB | `idx_orders_customer_placed` | 4,640 kB | 26.3% | Composite B-tree for `R06`, `R16` |
+| `orders` | 17 MB | `idx_orders_rider_placed` | 4,640 kB | 26.3% | Composite B-tree for `R21` |
+| `orders` | 17 MB | `idx_orders_placed_at` | 3,312 kB | 18.8% | B-tree on date for `R08`, `R14`, `R15`, `R17`, `R20`, `R22`, `R25` |
+| `orders` | 17 MB | `idx_orders_packing` | 16 kB | 0.1% | Partial B-tree for `status = 'PACKING'` (`W03`) |
+| `inventory_movements` | 5,632 kB | `idx_inventory_movements_store_type_date` | 3,592 kB | 63.8% | Composite B-tree for store restocks (`R24`) |
+| `inventory_movements` | 5,632 kB | `idx_inventory_movements_moved_at` | 1,984 kB | 35.2% | B-tree for data retention purge (`W05`) |
+| `inventory_movements` | 5,632 kB | `idx_inventory_movements_loss` | 328 kB | 5.8% | Partial B-tree for damage/expiry loss (`R10`) |
+| `customers` | 3,344 kB | `idx_customers_city_id` | 896 kB | 26.8% | Foreign key composite B-tree for `R25` |
+| `products` | 160 kB | `idx_products_name_trgm` | 120 kB | 75.0% | GIN Trigram index for `ILIKE` substring search (`R03`) |
+| `riders` | 136 kB | `idx_riders_store_status` | 80 kB | 58.8% | Composite B-tree for active store riders (`R21`, `W03`) |
+| `products` | 160 kB | `idx_products_category_id` | 32 kB | 20.0% | Foreign key B-tree for `R02`, `R19` |
+| **All New Indexes** | &mdash; | **Total Created Index Storage** | **45.6 MB** | &mdash; | Total footprint of Phase 4 index suite |
+
+> [!NOTE]
+> The largest index created is `idx_order_items_product_order` (20 MB), which is justified because `order_items` contains 675,000 tuples and inverting the composite primary key `(order_id, product_id)` into `(product_id, order_id)` is strictly necessary to prevent multi-second full table scans across multiple reporting queries.
+
+---
+
+## 7. Queries That Could Not Be Sped Up (and Why)
+
+Three queries demonstrated modest percentage improvements (5% to 17%) due to structural computational bounds:
+
+1. **R14 (Fill Rate per Store: 17.155 ms &rarr; 16.159 ms — 5.8% improvement):**
+   - **Reason:** R14 must calculate the short-fill percentage across all 675,000 order lines for every dark store in June 2026. While `idx_orders_placed_at` restricts the orders considered to June 2026, the query must physically read and evaluate tens of thousands of `order_items` rows to compare `quantity_delivered < quantity_ordered`. In PostgreSQL, an aggregation that touches a large percentage of active data pages cannot bypass sequential I/O cost without pre-aggregated materialized views.
+2. **R16 (Monthly Cohort Retention Analysis: 27.520 ms &rarr; 22.735 ms — 17.4% improvement):**
+   - **Reason:** Calculating customer cohort origin requires computing $\min(\text{placed\_at})$ across every customer in the database. Because every customer's order history must be inspected to determine their first order month, the entire `orders` table (150,000 rows) must be processed. Our rewrite from 40,000 correlated subqueries into a single-pass `GROUP BY` with `bool_or()` achieved maximum algorithmic efficiency for a relational scan, but the physical read of 150,000 rows remains bounded by memory bandwidth.
+3. **R22 (Support Console Deep Offset Pagination: 32.452 ms &rarr; 9.266 ms — 71.4% improvement):**
+   - **Reason:** Query `R22` requests `OFFSET 100000 LIMIT 25`. An index on `orders(placed_at DESC)` eliminated the expensive disk/memory sort node (reducing time from 32.4 ms to 9.2 ms). However, under SQL standard `OFFSET` semantics, the engine must still step through and discard the first 100,000 tuples in the index leaf pages.
+   - **Alternative (Keyset Pagination):** In production systems, replacing `OFFSET 100000` with keyset pagination (`WHERE placed_at < $last_seen_timestamp AND order_id < $last_seen_id ORDER BY placed_at DESC LIMIT 25`) drops latency to **0.05 ms** regardless of page depth.
+
+---
+
+## 8. Artifact & Audit Evidence Links
+
+- **Index DDL:** `sql/05_indexes.sql`
+- **Optimized Workload:** `sql/06_optimized_queries.sql`
+- **Optimized Benchmark Summary:** `benchmarks/results/optimized/summary.csv`
+- **Raw Query Plans (All 3 Runs per Query):** `benchmarks/results/optimized/`
+- **Baseline Benchmark Summary:** `benchmarks/results/baseline/summary.csv`
