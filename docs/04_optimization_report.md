@@ -138,3 +138,136 @@ Sort  (cost=1972131.63..1972131.94 rows=125 width=36) (actual time=1702.610..170
                       ->  Index Scan using orders_pkey on orders o  (cost=0.42..6.67 rows=1 width=4) (actual time=0.001..0.001 rows=0.06 loops=56292)
 Execution Time: 1702.644 ms
 ```
+
+#### After Plan:
+```
+Sort  (cost=13452.90..13456.65 rows=1500 width=36) (actual time=15.688..16.402 rows=125 loops=1)
+  Sort Key: (COALESCE(sum(oi.quantity_delivered), '0'::bigint)) DESC
+  Buffers: shared hit=4799
+  ->  HashAggregate  (cost=13358.77..13373.77 rows=1500 width=36) (actual time=15.661..16.384 rows=125 loops=1)
+        ->  Hash Right Join  (cost=1524.70..13343.10 rows=3133 width=32) (actual time=13.179..16.190 rows=3112 loops=1)
+              ->  Gather  (cost=1493.92..13140.03 rows=37593 width=8) (actual time=13.133..15.036 rows=37086 loops=1)
+                    ->  Hash Join  (cost=493.93..8380.73 rows=15664 width=8) (actual time=11.685..12.872 rows=12362 loops=3)
+                          ->  Parallel Seq Scan on order_items oi  (cost=0.00..7148.50 rows=281250 width=12)
+                          ->  Hash  (cost=389.50..389.50 rows=8354 width=4) (actual time=0.838..0.838 rows=8241 loops=3)
+                                ->  Index Scan using idx_orders_placed_at on orders o
+Execution Time: 16.457 ms
+```
+
+---
+
+### 2. R06 (Customer Latest Order Tracking)
+- **Baseline Time:** 12.113 ms &rarr; **Optimized Time:** 0.022 ms (**550.6&times; speedup / 99.8% reduction**)
+- **Baseline Bottleneck:** Lack of secondary index on `orders.customer_id`. PostgreSQL had to perform a full sequential scan across all 150,000 orders to find the matching rows for customer 1027, followed by a top-N sort.
+- **Optimization:** Added composite B-tree index `idx_orders_customer_placed` on `(customer_id, placed_at DESC)`.
+
+#### Before Plan:
+```
+Limit  (cost=4083.02..4083.02 rows=1 width=51) (actual time=18.758..18.759 rows=1 loops=1)
+  Buffers: shared hit=2211
+  ->  Sort  (cost=4083.02..4083.03 rows=4 width=51) (actual time=18.756..18.756 rows=1 loops=1)
+        Sort Key: placed_at DESC
+        ->  Seq Scan on orders  (cost=0.00..4083.00 rows=4 width=51) (actual time=1.288..18.712 rows=9 loops=1)
+              Filter: (customer_id = 1027)
+              Rows Removed by Filter: 149991
+Execution Time: 18.815 ms
+```
+
+#### After Plan:
+```
+Limit  (cost=0.42..5.44 rows=1 width=51) (actual time=0.010..0.010 rows=1 loops=1)
+  Buffers: shared hit=4
+  ->  Index Scan using idx_orders_customer_placed on orders  (cost=0.42..20.49 rows=4 width=51) (actual time=0.009..0.009 rows=1 loops=1)
+        Index Cond: (customer_id = 1027)
+        Index Searches: 1
+Execution Time: 0.021 ms
+```
+
+---
+
+### 3. R07 (Dark Store Screen Open Orders)
+- **Baseline Time:** 10.117 ms &rarr; **Optimized Time:** 0.038 ms (**266.2&times; speedup / 99.6% reduction**)
+- **Baseline Bottleneck:** Parallel sequential scan on `orders` (scanning 150,000 tuples, filtering out 149,996 rows) to identify open orders for store 43.
+- **Optimization:** Added composite B-tree index `idx_orders_store_status_placed` on `(store_id, status, placed_at)`.
+
+#### Before Plan:
+```
+Gather Merge  (cost=4641.84..4641.96 rows=1 width=26) (actual time=10.014..11.305 rows=4 loops=1)
+  Buffers: shared hit=2246
+  ->  Sort  (cost=3641.83..3641.84 rows=1 width=26) (actual time=7.819..7.819 rows=2 loops=2)
+        ->  Parallel Seq Scan on orders  (cost=0.00..3641.82 rows=1 width=26) (actual time=7.758..7.792 rows=2 loops=2)
+              Filter: ((store_id = 43) AND (status = ANY ('{PLACED,PACKING,OUT_FOR_DELIVERY}'::text[])))
+              Rows Removed by Filter: 74998
+Execution Time: 11.338 ms
+```
+
+#### After Plan:
+```
+Sort  (cost=17.31..17.32 rows=1 width=26) (actual time=0.031..0.032 rows=4 loops=1)
+  Sort Key: placed_at
+  Buffers: shared hit=9
+  ->  Index Scan using idx_orders_store_status_placed on orders  (cost=0.42..17.30 rows=1 width=26) (actual time=0.015..0.020 rows=4 loops=1)
+        Index Cond: ((store_id = 43) AND (status = ANY ('{PLACED,PACKING,OUT_FOR_DELIVERY}'::text[])))
+        Index Searches: 1
+Execution Time: 0.041 ms
+```
+
+---
+
+### 4. W02 (Packing Done Stock Deduction)
+- **Baseline Time:** 13.455 ms &rarr; **Optimized Time:** 0.182 ms (**73.9&times; speedup / 98.6% reduction**)
+- **Baseline Bottleneck:** The subquery `SELECT max(order_id) FROM orders WHERE store_id = 43 AND status IN ('PLACED', 'PACKING')` lacked an index on `(store_id, status)`, triggering a full sequential scan of 150,000 orders on every packing completion event.
+- **Optimization:** The composite index `idx_orders_store_status_placed` resolved the subquery in 0.017 ms, reading only 9 buffer pages instead of 2,208.
+
+#### Before Plan:
+```
+Update on store_inventory si  (cost=4458.73..4515.12 rows=0 width=0) (actual time=14.259..14.260 rows=0 loops=1)
+  InitPlan 1
+    ->  Aggregate  (cost=4458.00..4458.01 rows=1 width=4) (actual time=14.069..14.069 rows=1 loops=1)
+          ->  Seq Scan on orders  (cost=0.00..4458.00 rows=1 width=4) (actual time=14.030..14.065 rows=2 loops=1)
+                Filter: ((status = ANY ('{PLACED,PACKING}'::text[])) AND (store_id = 43))
+                Rows Removed by Filter: 149998
+Execution Time: 14.362 ms
+```
+
+#### After Plan:
+```
+Update on store_inventory si  (cost=13.60..69.99 rows=0 width=0) (actual time=0.150..0.151 rows=0 loops=1)
+  InitPlan 1
+    ->  Aggregate  (cost=12.87..12.88 rows=1 width=4) (actual time=0.017..0.017 rows=1 loops=1)
+          ->  Index Scan using idx_orders_store_status_placed on orders  (cost=0.42..12.87 rows=1 width=4) (actual time=0.011..0.016 rows=2 loops=1)
+                Index Cond: ((store_id = 43) AND (status = ANY ('{PLACED,PACKING}'::text[])))
+Execution Time: 0.212 ms
+```
+
+---
+
+### 5. W03 (Rider Dispatch: Oldest Packing Order)
+- **Baseline Time:** 12.750 ms &rarr; **Optimized Time:** 0.265 ms (**48.1&times; speedup / 97.9% reduction**)
+- **Baseline Bottleneck:** Subquery `SELECT min(order_id) FROM orders WHERE status = 'PACKING'` scanned `orders_pkey` backward across 149,895 rows searching for the rare `PACKING` status. The rider subquery also performed sequential scans on `riders`.
+- **Optimization:** Added partial B-tree index `idx_orders_packing` on `orders(order_id) WHERE status = 'PACKING'` and composite index `idx_riders_store_status` on `riders(store_id, status, rider_id)`.
+
+#### Before Plan:
+```
+Update on orders o  (cost=163.15..177.92 rows=0 width=0) (actual time=13.367..13.368 rows=0 loops=1)
+  InitPlan 4
+    ->  Result  (cost=162.72..162.73 rows=1 width=4) (actual time=13.218..13.218 rows=1 loops=1)
+          InitPlan 3
+            ->  Limit  (cost=0.42..162.72 rows=1 width=4) (actual time=13.215..13.215 rows=1 loops=1)
+                  ->  Index Scan using orders_pkey on orders  (cost=0.42..6492.42 rows=40 width=4)
+                        Filter: (status = 'PACKING'::text)
+                        Rows Removed by Filter: 149895
+Execution Time: 13.530 ms
+```
+
+#### After Plan:
+```
+Update on orders o  (cost=1.38..10.02 rows=0 width=0) (actual time=0.174..0.174 rows=0 loops=1)
+  InitPlan 4
+    ->  Result  (cost=0.95..0.96 rows=1 width=4) (actual time=0.016..0.016 rows=1 loops=1)
+          InitPlan 3
+            ->  Limit  (cost=0.14..0.95 rows=1 width=4) (actual time=0.015..0.015 rows=1 loops=1)
+                  ->  Index Only Scan using idx_orders_packing on orders  (cost=0.14..12.36 rows=15 width=4)
+Execution Time: 0.265 ms
+```
+
