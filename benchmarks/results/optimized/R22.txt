@@ -1,30 +1,55 @@
 === R22 run 1 ===
-Limit  (cost=4078.42..4079.44 rows=25 width=35) (actual time=9.796..9.799 rows=25.00 loops=1)
-  Buffers: shared hit=1579 read=138
-  ->  Index Scan using idx_orders_placed_at on orders  (cost=0.42..6117.42 rows=150000 width=35) (actual time=0.007..8.245 rows=100025.00 loops=1)
+Limit  (cost=4411.75..4412.86 rows=25 width=35) (actual time=34.386..34.389 rows=25.00 loops=1)
+  Buffers: shared hit=361 read=359
+  ->  Index Only Scan using idx_orders_placed on orders  (cost=0.42..6617.42 rows=150000 width=35) (actual time=0.069..32.065 rows=100025.00 loops=1)
+        Heap Fetches: 118
         Index Searches: 1
-        Buffers: shared hit=1579 read=138
+        Buffers: shared hit=361 read=359
 Planning:
-  Buffers: shared hit=176
-Planning Time: 0.223 ms
-Execution Time: 9.810 ms
+  Buffers: shared hit=217
+Planning Time: 0.992 ms
+Execution Time: 34.417 ms
 === R22 run 2 ===
-Limit  (cost=4078.42..4079.44 rows=25 width=35) (actual time=8.930..8.932 rows=25.00 loops=1)
-  Buffers: shared hit=1717
-  ->  Index Scan using idx_orders_placed_at on orders  (cost=0.42..6117.42 rows=150000 width=35) (actual time=0.007..7.376 rows=100025.00 loops=1)
+Limit  (cost=4411.75..4412.86 rows=25 width=35) (actual time=10.018..10.022 rows=25.00 loops=1)
+  Buffers: shared hit=720
+  ->  Index Only Scan using idx_orders_placed on orders  (cost=0.42..6617.42 rows=150000 width=35) (actual time=0.056..7.172 rows=100025.00 loops=1)
+        Heap Fetches: 118
         Index Searches: 1
-        Buffers: shared hit=1717
+        Buffers: shared hit=720
 Planning:
-  Buffers: shared hit=176
-Planning Time: 0.217 ms
-Execution Time: 8.943 ms
+  Buffers: shared hit=217
+Planning Time: 1.018 ms
+Execution Time: 10.051 ms
 === R22 run 3 ===
-Limit  (cost=4078.42..4079.44 rows=25 width=35) (actual time=9.032..9.034 rows=25.00 loops=1)
-  Buffers: shared hit=1717
-  ->  Index Scan using idx_orders_placed_at on orders  (cost=0.42..6117.42 rows=150000 width=35) (actual time=0.007..7.474 rows=100025.00 loops=1)
+Limit  (cost=4411.75..4412.86 rows=25 width=35) (actual time=10.533..10.535 rows=25.00 loops=1)
+  Buffers: shared hit=720
+  ->  Index Only Scan using idx_orders_placed on orders  (cost=0.42..6617.42 rows=150000 width=35) (actual time=0.054..7.528 rows=100025.00 loops=1)
+        Heap Fetches: 118
         Index Searches: 1
-        Buffers: shared hit=1717
+        Buffers: shared hit=720
 Planning:
-  Buffers: shared hit=176
-Planning Time: 0.223 ms
-Execution Time: 9.045 ms
+  Buffers: shared hit=217
+Planning Time: 0.459 ms
+Execution Time: 10.559 ms
+=== R22 run 4 ===
+Limit  (cost=4411.75..4412.86 rows=25 width=35) (actual time=9.511..9.514 rows=25.00 loops=1)
+  Buffers: shared hit=720
+  ->  Index Only Scan using idx_orders_placed on orders  (cost=0.42..6617.42 rows=150000 width=35) (actual time=0.045..6.954 rows=100025.00 loops=1)
+        Heap Fetches: 118
+        Index Searches: 1
+        Buffers: shared hit=720
+Planning:
+  Buffers: shared hit=217
+Planning Time: 0.416 ms
+Execution Time: 9.536 ms
+=== R22 run 5 ===
+Limit  (cost=4411.75..4412.86 rows=25 width=35) (actual time=9.022..9.025 rows=25.00 loops=1)
+  Buffers: shared hit=720
+  ->  Index Only Scan using idx_orders_placed on orders  (cost=0.42..6617.42 rows=150000 width=35) (actual time=0.022..6.430 rows=100025.00 loops=1)
+        Heap Fetches: 118
+        Index Searches: 1
+        Buffers: shared hit=720
+Planning:
+  Buffers: shared hit=217
+Planning Time: 0.299 ms
+Execution Time: 9.038 ms

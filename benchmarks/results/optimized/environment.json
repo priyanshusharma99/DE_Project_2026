@@ -1,0 +1,1 @@
+{"server_version" : "18.6 (Homebrew)", "timezone" : "Asia/Kolkata", "database" : "blinkit_db", "indexes" : 30, "orders" : 150000, "order_items" : 675000, "inventory" : 126000, "movements" : 90000, "checkout_test_rows" : 0}

@@ -1,0 +1,100 @@
+=== R03 run 1 ===
+Sort  (cost=292.96..293.01 rows=20 width=33) (actual time=1.542..1.545 rows=18.00 loops=1)
+  Sort Key: si.selling_price
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=103
+  ->  Nested Loop  (cost=0.29..292.53 rows=20 width=33) (actual time=0.126..1.481 rows=18.00 loops=1)
+        Buffers: shared hit=100
+        ->  Seq Scan on products p  (cost=0.00..38.75 rows=31 width=28) (actual time=0.037..1.202 rows=31.00 loops=1)
+              Filter: (product_name ~~* '%milk%'::text)
+              Rows Removed by Filter: 1469
+              Buffers: shared hit=20
+        ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.29..8.19 rows=1 width=9) (actual time=0.008..0.008 rows=0.58 loops=31)
+              Index Cond: ((store_id = 43) AND (product_id = p.product_id))
+              Filter: (quantity_on_hand > 0)
+              Index Searches: 31
+              Buffers: shared hit=80
+Planning:
+  Buffers: shared hit=238
+Planning Time: 1.662 ms
+Execution Time: 1.614 ms
+=== R03 run 2 ===
+Sort  (cost=292.96..293.01 rows=20 width=33) (actual time=1.196..1.198 rows=18.00 loops=1)
+  Sort Key: si.selling_price
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=103
+  ->  Nested Loop  (cost=0.29..292.53 rows=20 width=33) (actual time=0.104..1.143 rows=18.00 loops=1)
+        Buffers: shared hit=100
+        ->  Seq Scan on products p  (cost=0.00..38.75 rows=31 width=28) (actual time=0.034..0.979 rows=31.00 loops=1)
+              Filter: (product_name ~~* '%milk%'::text)
+              Rows Removed by Filter: 1469
+              Buffers: shared hit=20
+        ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.29..8.19 rows=1 width=9) (actual time=0.005..0.005 rows=0.58 loops=31)
+              Index Cond: ((store_id = 43) AND (product_id = p.product_id))
+              Filter: (quantity_on_hand > 0)
+              Index Searches: 31
+              Buffers: shared hit=80
+Planning:
+  Buffers: shared hit=238
+Planning Time: 1.262 ms
+Execution Time: 1.272 ms
+=== R03 run 3 ===
+Sort  (cost=292.96..293.01 rows=20 width=33) (actual time=1.231..1.233 rows=18.00 loops=1)
+  Sort Key: si.selling_price
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=103
+  ->  Nested Loop  (cost=0.29..292.53 rows=20 width=33) (actual time=0.098..1.181 rows=18.00 loops=1)
+        Buffers: shared hit=100
+        ->  Seq Scan on products p  (cost=0.00..38.75 rows=31 width=28) (actual time=0.034..0.949 rows=31.00 loops=1)
+              Filter: (product_name ~~* '%milk%'::text)
+              Rows Removed by Filter: 1469
+              Buffers: shared hit=20
+        ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.29..8.19 rows=1 width=9) (actual time=0.007..0.007 rows=0.58 loops=31)
+              Index Cond: ((store_id = 43) AND (product_id = p.product_id))
+              Filter: (quantity_on_hand > 0)
+              Index Searches: 31
+              Buffers: shared hit=80
+Planning:
+  Buffers: shared hit=238
+Planning Time: 1.196 ms
+Execution Time: 1.298 ms
+=== R03 run 4 ===
+Sort  (cost=292.96..293.01 rows=20 width=33) (actual time=1.078..1.079 rows=18.00 loops=1)
+  Sort Key: si.selling_price
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=103
+  ->  Nested Loop  (cost=0.29..292.53 rows=20 width=33) (actual time=0.102..1.035 rows=18.00 loops=1)
+        Buffers: shared hit=100
+        ->  Seq Scan on products p  (cost=0.00..38.75 rows=31 width=28) (actual time=0.036..0.912 rows=31.00 loops=1)
+              Filter: (product_name ~~* '%milk%'::text)
+              Rows Removed by Filter: 1469
+              Buffers: shared hit=20
+        ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.29..8.19 rows=1 width=9) (actual time=0.004..0.004 rows=0.58 loops=31)
+              Index Cond: ((store_id = 43) AND (product_id = p.product_id))
+              Filter: (quantity_on_hand > 0)
+              Index Searches: 31
+              Buffers: shared hit=80
+Planning:
+  Buffers: shared hit=238
+Planning Time: 1.172 ms
+Execution Time: 1.141 ms
+=== R03 run 5 ===
+Sort  (cost=292.96..293.01 rows=20 width=33) (actual time=1.455..1.458 rows=18.00 loops=1)
+  Sort Key: si.selling_price
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=103
+  ->  Nested Loop  (cost=0.29..292.53 rows=20 width=33) (actual time=0.112..1.397 rows=18.00 loops=1)
+        Buffers: shared hit=100
+        ->  Seq Scan on products p  (cost=0.00..38.75 rows=31 width=28) (actual time=0.036..1.175 rows=31.00 loops=1)
+              Filter: (product_name ~~* '%milk%'::text)
+              Rows Removed by Filter: 1469
+              Buffers: shared hit=20
+        ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.29..8.19 rows=1 width=9) (actual time=0.007..0.007 rows=0.58 loops=31)
+              Index Cond: ((store_id = 43) AND (product_id = p.product_id))
+              Filter: (quantity_on_hand > 0)
+              Index Searches: 31
+              Buffers: shared hit=80
+Planning:
+  Buffers: shared hit=238
+Planning Time: 1.361 ms
+Execution Time: 1.532 ms

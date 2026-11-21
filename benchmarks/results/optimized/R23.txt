@@ -1,27 +1,45 @@
 === R23 run 1 ===
-Index Scan using products_sku_key on products  (cost=0.28..8.29 rows=1 width=39) (actual time=0.013..0.013 rows=1.00 loops=1)
+Index Scan using products_sku_key on products  (cost=0.28..8.29 rows=1 width=39) (actual time=0.011..0.011 rows=1.00 loops=1)
   Index Cond: (sku = 'BK19787884'::text)
   Index Searches: 1
   Buffers: shared hit=3
 Planning:
-  Buffers: shared hit=134
-Planning Time: 0.199 ms
-Execution Time: 0.029 ms
+  Buffers: shared hit=93
+Planning Time: 0.157 ms
+Execution Time: 0.028 ms
 === R23 run 2 ===
-Index Scan using products_sku_key on products  (cost=0.28..8.29 rows=1 width=39) (actual time=0.008..0.008 rows=1.00 loops=1)
+Index Scan using products_sku_key on products  (cost=0.28..8.29 rows=1 width=39) (actual time=0.010..0.011 rows=1.00 loops=1)
   Index Cond: (sku = 'BK19787884'::text)
   Index Searches: 1
   Buffers: shared hit=3
 Planning:
-  Buffers: shared hit=134
-Planning Time: 0.196 ms
-Execution Time: 0.024 ms
+  Buffers: shared hit=93
+Planning Time: 0.152 ms
+Execution Time: 0.026 ms
 === R23 run 3 ===
-Index Scan using products_sku_key on products  (cost=0.28..8.29 rows=1 width=39) (actual time=0.007..0.007 rows=1.00 loops=1)
+Index Scan using products_sku_key on products  (cost=0.28..8.29 rows=1 width=39) (actual time=0.025..0.025 rows=1.00 loops=1)
   Index Cond: (sku = 'BK19787884'::text)
   Index Searches: 1
   Buffers: shared hit=3
 Planning:
-  Buffers: shared hit=134
-Planning Time: 0.178 ms
-Execution Time: 0.022 ms
+  Buffers: shared hit=93
+Planning Time: 0.424 ms
+Execution Time: 0.061 ms
+=== R23 run 4 ===
+Index Scan using products_sku_key on products  (cost=0.28..8.29 rows=1 width=39) (actual time=0.047..0.047 rows=1.00 loops=1)
+  Index Cond: (sku = 'BK19787884'::text)
+  Index Searches: 1
+  Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=93
+Planning Time: 0.621 ms
+Execution Time: 0.107 ms
+=== R23 run 5 ===
+Index Scan using products_sku_key on products  (cost=0.28..8.29 rows=1 width=39) (actual time=0.036..0.036 rows=1.00 loops=1)
+  Index Cond: (sku = 'BK19787884'::text)
+  Index Searches: 1
+  Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=93
+Planning Time: 0.521 ms
+Execution Time: 0.086 ms

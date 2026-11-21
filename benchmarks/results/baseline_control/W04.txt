@@ -1,0 +1,85 @@
+=== W04 run 1 ===
+Update on store_inventory  (cost=20.23..1039.46 rows=0 width=0) (actual time=1.743..1.744 rows=0.00 loops=1)
+  Buffers: shared hit=2039 dirtied=5
+  ->  Bitmap Heap Scan on store_inventory  (cost=20.23..1039.46 rows=349 width=18) (actual time=0.037..0.109 rows=229.00 loops=1)
+        Recheck Cond: (store_id = 43)
+        Filter: (quantity_on_hand <= reorder_level)
+        Rows Removed by Filter: 821
+        Heap Blocks: exact=16
+        Buffers: shared hit=24
+        ->  Bitmap Index Scan on store_inventory_pkey  (cost=0.00..20.14 rows=1047 width=0) (actual time=0.027..0.028 rows=1435.00 loops=1)
+              Index Cond: (store_id = 43)
+              Index Searches: 1
+              Buffers: shared hit=8
+Planning:
+  Buffers: shared hit=73
+Planning Time: 0.135 ms
+Execution Time: 1.786 ms
+=== W04 run 2 ===
+Update on store_inventory  (cost=20.23..1039.46 rows=0 width=0) (actual time=1.659..1.660 rows=0.00 loops=1)
+  Buffers: shared hit=2014 dirtied=2
+  ->  Bitmap Heap Scan on store_inventory  (cost=20.23..1039.46 rows=349 width=18) (actual time=0.035..0.095 rows=229.00 loops=1)
+        Recheck Cond: (store_id = 43)
+        Filter: (quantity_on_hand <= reorder_level)
+        Rows Removed by Filter: 821
+        Heap Blocks: exact=16
+        Buffers: shared hit=24
+        ->  Bitmap Index Scan on store_inventory_pkey  (cost=0.00..20.14 rows=1047 width=0) (actual time=0.025..0.025 rows=1419.00 loops=1)
+              Index Cond: (store_id = 43)
+              Index Searches: 1
+              Buffers: shared hit=8
+Planning:
+  Buffers: shared hit=73
+Planning Time: 0.125 ms
+Execution Time: 1.699 ms
+=== W04 run 3 ===
+Update on store_inventory  (cost=20.23..1039.46 rows=0 width=0) (actual time=0.587..0.587 rows=0.00 loops=1)
+  Buffers: shared hit=1982 dirtied=2
+  ->  Bitmap Heap Scan on store_inventory  (cost=20.23..1039.46 rows=349 width=18) (actual time=0.036..0.101 rows=229.00 loops=1)
+        Recheck Cond: (store_id = 43)
+        Filter: (quantity_on_hand <= reorder_level)
+        Rows Removed by Filter: 821
+        Heap Blocks: exact=16
+        Buffers: shared hit=24
+        ->  Bitmap Index Scan on store_inventory_pkey  (cost=0.00..20.14 rows=1047 width=0) (actual time=0.026..0.026 rows=1419.00 loops=1)
+              Index Cond: (store_id = 43)
+              Index Searches: 1
+              Buffers: shared hit=8
+Planning:
+  Buffers: shared hit=73
+Planning Time: 0.123 ms
+Execution Time: 0.626 ms
+=== W04 run 4 ===
+Update on store_inventory  (cost=20.23..1039.46 rows=0 width=0) (actual time=1.122..1.122 rows=0.00 loops=1)
+  Buffers: shared hit=1987 dirtied=2
+  ->  Bitmap Heap Scan on store_inventory  (cost=20.23..1039.46 rows=349 width=18) (actual time=0.036..0.092 rows=229.00 loops=1)
+        Recheck Cond: (store_id = 43)
+        Filter: (quantity_on_hand <= reorder_level)
+        Rows Removed by Filter: 821
+        Heap Blocks: exact=16
+        Buffers: shared hit=24
+        ->  Bitmap Index Scan on store_inventory_pkey  (cost=0.00..20.14 rows=1047 width=0) (actual time=0.026..0.026 rows=1418.00 loops=1)
+              Index Cond: (store_id = 43)
+              Index Searches: 1
+              Buffers: shared hit=8
+Planning:
+  Buffers: shared hit=73
+Planning Time: 0.123 ms
+Execution Time: 1.159 ms
+=== W04 run 5 ===
+Update on store_inventory  (cost=20.23..1039.46 rows=0 width=0) (actual time=0.640..0.640 rows=0.00 loops=1)
+  Buffers: shared hit=2005 dirtied=2
+  ->  Bitmap Heap Scan on store_inventory  (cost=20.23..1039.46 rows=349 width=18) (actual time=0.034..0.105 rows=229.00 loops=1)
+        Recheck Cond: (store_id = 43)
+        Filter: (quantity_on_hand <= reorder_level)
+        Rows Removed by Filter: 821
+        Heap Blocks: exact=15
+        Buffers: shared hit=23
+        ->  Bitmap Index Scan on store_inventory_pkey  (cost=0.00..20.14 rows=1047 width=0) (actual time=0.024..0.025 rows=1413.00 loops=1)
+              Index Cond: (store_id = 43)
+              Index Searches: 1
+              Buffers: shared hit=8
+Planning:
+  Buffers: shared hit=73
+Planning Time: 0.124 ms
+Execution Time: 0.680 ms

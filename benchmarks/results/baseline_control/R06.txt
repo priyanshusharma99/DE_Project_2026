@@ -1,0 +1,75 @@
+=== R06 run 1 ===
+Limit  (cost=4083.02..4083.02 rows=1 width=51) (actual time=17.203..17.204 rows=1.00 loops=1)
+  Buffers: shared hit=2211
+  ->  Sort  (cost=4083.02..4083.03 rows=4 width=51) (actual time=17.200..17.201 rows=1.00 loops=1)
+        Sort Key: placed_at DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=2211
+        ->  Seq Scan on orders  (cost=0.00..4083.00 rows=4 width=51) (actual time=1.004..17.166 rows=9.00 loops=1)
+              Filter: (customer_id = 1027)
+              Rows Removed by Filter: 149991
+              Buffers: shared hit=2208
+Planning:
+  Buffers: shared hit=97
+Planning Time: 0.849 ms
+Execution Time: 17.254 ms
+=== R06 run 2 ===
+Limit  (cost=4083.02..4083.02 rows=1 width=51) (actual time=13.037..13.038 rows=1.00 loops=1)
+  Buffers: shared hit=2211
+  ->  Sort  (cost=4083.02..4083.03 rows=4 width=51) (actual time=13.036..13.037 rows=1.00 loops=1)
+        Sort Key: placed_at DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=2211
+        ->  Seq Scan on orders  (cost=0.00..4083.00 rows=4 width=51) (actual time=0.509..13.017 rows=9.00 loops=1)
+              Filter: (customer_id = 1027)
+              Rows Removed by Filter: 149991
+              Buffers: shared hit=2208
+Planning:
+  Buffers: shared hit=97
+Planning Time: 0.258 ms
+Execution Time: 13.062 ms
+=== R06 run 3 ===
+Limit  (cost=4083.02..4083.02 rows=1 width=51) (actual time=7.407..7.407 rows=1.00 loops=1)
+  Buffers: shared hit=2211
+  ->  Sort  (cost=4083.02..4083.03 rows=4 width=51) (actual time=7.406..7.406 rows=1.00 loops=1)
+        Sort Key: placed_at DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=2211
+        ->  Seq Scan on orders  (cost=0.00..4083.00 rows=4 width=51) (actual time=0.630..7.381 rows=9.00 loops=1)
+              Filter: (customer_id = 1027)
+              Rows Removed by Filter: 149991
+              Buffers: shared hit=2208
+Planning:
+  Buffers: shared hit=97
+Planning Time: 0.436 ms
+Execution Time: 7.436 ms
+=== R06 run 4 ===
+Limit  (cost=4083.02..4083.02 rows=1 width=51) (actual time=9.778..9.778 rows=1.00 loops=1)
+  Buffers: shared hit=2211
+  ->  Sort  (cost=4083.02..4083.03 rows=4 width=51) (actual time=9.777..9.777 rows=1.00 loops=1)
+        Sort Key: placed_at DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=2211
+        ->  Seq Scan on orders  (cost=0.00..4083.00 rows=4 width=51) (actual time=0.218..9.767 rows=9.00 loops=1)
+              Filter: (customer_id = 1027)
+              Rows Removed by Filter: 149991
+              Buffers: shared hit=2208
+Planning:
+  Buffers: shared hit=97
+Planning Time: 0.156 ms
+Execution Time: 9.791 ms
+=== R06 run 5 ===
+Limit  (cost=4083.02..4083.02 rows=1 width=51) (actual time=7.212..7.213 rows=1.00 loops=1)
+  Buffers: shared hit=2211
+  ->  Sort  (cost=4083.02..4083.03 rows=4 width=51) (actual time=7.212..7.212 rows=1.00 loops=1)
+        Sort Key: placed_at DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=2211
+        ->  Seq Scan on orders  (cost=0.00..4083.00 rows=4 width=51) (actual time=0.191..7.204 rows=9.00 loops=1)
+              Filter: (customer_id = 1027)
+              Rows Removed by Filter: 149991
+              Buffers: shared hit=2208
+Planning:
+  Buffers: shared hit=97
+Planning Time: 0.150 ms
+Execution Time: 7.228 ms

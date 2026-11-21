@@ -1,0 +1,14 @@
+indexname,tablename,index_bytes,table_heap_bytes,indexdef
+idx_inventory_low_store,store_inventory,204800,7864320,"CREATE INDEX idx_inventory_low_store ON blinkit.store_inventory USING btree (store_id, quantity_on_hand) WHERE (quantity_on_hand <= reorder_level)"
+idx_items_product_order,order_items,15187968,35520512,"CREATE INDEX idx_items_product_order ON blinkit.order_items USING btree (product_id, order_id)"
+idx_items_substitute_order,order_items,352256,35520512,"CREATE INDEX idx_items_substitute_order ON blinkit.order_items USING btree (substitute_product_id, order_id) WHERE (substitute_product_id IS NOT NULL)"
+idx_movements_restock_store_date,inventory_movements,2949120,5767168,"CREATE INDEX idx_movements_restock_store_date ON blinkit.inventory_movements USING btree (store_id, moved_at) INCLUDE (product_id, quantity) WHERE (movement_type = 'RESTOCK'::text)"
+idx_movements_wastage_date,inventory_movements,434176,5767168,"CREATE INDEX idx_movements_wastage_date ON blinkit.inventory_movements USING btree (moved_at) INCLUDE (product_id, movement_type, quantity) WHERE (movement_type = ANY (ARRAY['EXPIRY'::text, 'DAMAGE'::text]))"
+idx_orders_customer_placed,orders,4751360,18087936,"CREATE INDEX idx_orders_customer_placed ON blinkit.orders USING btree (customer_id, placed_at DESC)"
+idx_orders_open_store,orders,16384,18087936,"CREATE INDEX idx_orders_open_store ON blinkit.orders USING btree (store_id, placed_at) WHERE (status = ANY (ARRAY['PLACED'::text, 'PACKING'::text, 'OUT_FOR_DELIVERY'::text]))"
+idx_orders_pack_store,orders,16384,18087936,"CREATE INDEX idx_orders_pack_store ON blinkit.orders USING btree (store_id, order_id DESC) WHERE (status = ANY (ARRAY['PLACED'::text, 'PACKING'::text]))"
+idx_orders_packing_id,orders,16384,18087936,CREATE INDEX idx_orders_packing_id ON blinkit.orders USING btree (order_id) WHERE (status = 'PACKING'::text)
+idx_orders_placed,orders,8830976,18087936,"CREATE INDEX idx_orders_placed ON blinkit.orders USING btree (placed_at DESC) INCLUDE (order_id, customer_id, store_id, status, total_amount)"
+idx_orders_rider_placed,orders,4571136,18087936,"CREATE INDEX idx_orders_rider_placed ON blinkit.orders USING btree (rider_id, placed_at) WHERE (rider_id IS NOT NULL)"
+idx_orders_store_placed,orders,4751360,18087936,"CREATE INDEX idx_orders_store_placed ON blinkit.orders USING btree (store_id, placed_at)"
+idx_riders_active_store,riders,57344,139264,"CREATE INDEX idx_riders_active_store ON blinkit.riders USING btree (store_id, rider_id) WHERE (status = 'ACTIVE'::text)"

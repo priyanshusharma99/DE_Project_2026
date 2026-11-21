@@ -1,338 +1,444 @@
-# Phase 4: Query and Index Optimization Report (Milestone CP3)
+# CP3: Query Optimization Report
 
-## 1. Environment and Methodology
+Benchmarked on 21 November 2026 (Asia/Kolkata), using the existing `blinkit_db` on the MacBook Pro M4 recorded in `team.json`, PostgreSQL 18.6 (Homebrew). Session timezone: `Asia/Kolkata`. Dataset: 150,000 orders, 675,000 order items, 126,000 inventory rows and 90,000 movements. No seed records were changed.
 
-- **PostgreSQL Version:** 18.6 (Homebrew / Postgres.app)
-- **Database & Schema:** `blinkit_db`, schema `blinkit`
-- **Hardware / Benchmark Host:** MacBook Pro M4 (as specified in [`team.json`](../team.json))
-- **Dataset Size:** 150,000 orders, 675,000 order items, 126,000 store inventory, 90,000 inventory movements (total 1,084,442 rows)
-- **Measurement Tool:** [`benchmarks/run_benchmark.sh`](../benchmarks/run_benchmark.sh)
-  - Workload executed: [`sql/06_optimized_queries.sql`](../sql/06_optimized_queries.sql)
-  - Index definitions: [`sql/05_indexes.sql`](../sql/05_indexes.sql)
-  - Repetitions: 3 consecutive runs per query using `EXPLAIN (ANALYZE, BUFFERS)`.
-  - Reported timings: Actual PostgreSQL `Execution Time` in milliseconds.
-  - Averages: Arithmetic mean over 3 runs rounded to 3 decimal places.
-  - Write queries (`W01`–`W05`) executed inside explicit `BEGIN; ... ROLLBACK;` blocks.
-  - Baseline comparison values imported directly from [`benchmarks/results/baseline/summary.csv`](../benchmarks/results/baseline/summary.csv).
+The sum of query averages fell from **2031.380 ms to 153.710 ms**, a **13.22× speedup (92.43% reduction)** against CP2. These sums are a serial workload comparison, not concurrent throughput or end-to-end app latency. R13 intentionally changes its incorrect result.
 
----
+## Reproduction and measurement
 
-## 2. Optimization Summary Table (All 30 Queries)
+Run from the repository root. Index DDL assumes the CP1 schema with no CP3 indexes; apply it once. The original workload and supplied benchmark script are unchanged.
 
-$$\text{Improvement \%} = \frac{\text{Before} - \text{After}}{\text{Before}} \times 100$$
-
-| Query | Before (ms) | Problem Found in Baseline Plan | Optimization Applied | After (ms) | Improvement % | Speedup | Same Result? |
-|:---|---:|:---|:---|---:|---:|---:|:---:|
-| **R01** | 0.243 | Sequential scan on 120 dark stores | Spatial bounding box scan on cached table | 0.065 | 73.3% | 3.7&times; | &check; |
-| **R02** | 1.108 | Scan on `products` followed by PK lookups on inventory | B-tree index on `products(category_id, is_active)` | 0.237 | 78.6% | 4.7&times; | &check; |
-| **R03** | 1.577 | Sequential scan on 1,500 products for substring `ILIKE '%milk%'` | GIN Trigram index (`pg_trgm`) on `products(product_name)` | 0.152 | 90.4% | 10.4&times; | &check; |
-| **R04** | 0.454 | Sequential scan on stores with composite PK probe | Indexed city filter and composite inventory PK probe | 0.119 | 73.8% | 3.8&times; | &check; |
-| **R05** | 0.125 | Point lookup for 4 items via PK | Composite PK index point scan | 0.028 | 77.6% | 4.5&times; | &check; |
-| **R06** | 12.113 | Full table scan on 150k orders for `customer_id = 1027` | B-tree index on `orders(customer_id, placed_at DESC)` | 0.022 | 99.8% | 550.6&times; | &check; |
-| **R07** | 10.117 | Full table scan on 150k orders for store open statuses | Composite B-tree index on `orders(store_id, status, placed_at)` | 0.038 | 99.6% | 266.2&times; | &check; |
-| **R08** | 10.510 | Full scan on 150k orders to filter June deliveries | B-tree index range scan on `orders(placed_at DESC)` | 1.614 | 84.6% | 6.5&times; | &check; |
-| **R09** | 0.543 | Bitmap scan on inventory with sequential product scan | Bitmap scan on `store_inventory_pkey` with product lookup | 0.258 | 52.5% | 2.1&times; | &check; |
-| **R10** | 10.836 | Sequential scan on 90k inventory movements for June wastage | B-tree index range scan on `inventory_movements(moved_at)` | 0.914 | 91.6% | 11.9&times; | &check; |
-| **R11** | 9.052 | Full scan on 150k orders for store 43 June deliveries | Composite B-tree scan on `orders(store_id, status, placed_at)` | 0.141 | 98.4% | 64.2&times; | &check; |
-| **R12** | 11.567 | Sequential scan on 675k `order_items` for `product_id = 1236` | Covering B-tree index on `order_items(product_id, order_id)` | 1.044 | 91.0% | 11.1&times; | &check; |
-| **R13** | 19.780 | Returned 0 rows due to SQL three-valued logic `NOT IN (NULL)` bug | Rewritten to `NOT EXISTS` + partial index on non-null substitutes | 21.383 | -8.1% | 0.9&times; | &check; *(Corrected)* |
-| **R14** | 17.155 | Hash join of 675k order lines with 150k orders | Index range scan on `orders(placed_at DESC)` joined to order lines | 16.159 | 5.8% | 1.1&times; | &check; |
-| **R15** | 8.034 | Full scan on 150k orders due to non-sargable `DATE(placed_at)` | Rewritten to sargable interval + index on `orders(placed_at DESC)` | 0.114 | 98.6% | 70.5&times; | &check; |
-| **R16** | 27.520 | 40,000 correlated `EXISTS` subquery executions across orders | Rewritten to single-pass `GROUP BY` with `bool_or()` aggregation | 22.735 | 17.4% | 1.2&times; | &check; |
-| **R17** | 27.575 | Non-sargable `EXTRACT(YEAR FROM placed_at) = 2026` | Rewritten to sargable 2026 interval + index on `orders(placed_at DESC)` | 16.779 | 39.2% | 1.6&times; | &check; |
-| **R18** | 5.212 | Correlated subquery scanning store orders and order items | Index scans on `orders(store_id, status, placed_at)` & PKs | 0.679 | 87.0% | 7.7&times; | &check; |
-| **R19** | 1,740.334 | Correlated scalar subquery executed 125&times; scanning 675k lines | Rewritten to relational `LEFT JOIN` + `GROUP BY` with date index | 16.400 | 99.1% | 106.1&times; | &check; |
-| **R20** | 9.239 | Non-sargable `placed_at::date BETWEEN ...` | Rewritten to sargable range + index on `orders(placed_at DESC)` | 1.846 | 80.0% | 5.0&times; | &check; |
-| **R21** | 5.083 | Subquery scanning orders for rider deliveries on 30 June | Composite B-tree on `orders(rider_id, placed_at)` & rider index | 0.080 | 98.4% | 63.5&times; | &check; |
-| **R22** | 32.452 | Full table scan & memory sort to skip `OFFSET 100000` | Index Scan on `orders(placed_at DESC)` avoiding memory sort | 9.266 | 71.4% | 3.5&times; | &check; |
-| **R23** | 0.028 | Unique index lookup on `products(sku)` | Direct unique index lookup | 0.025 | 10.7% | 1.1&times; | &check; |
-| **R24** | 4.611 | Full scan on 90k movements for store 43 restocks | Composite B-tree on `inventory_movements(store_id, type, moved_at)` | 0.053 | 98.9% | 87.0&times; | &check; |
-| **R25** | 17.128 | Full scan on 40k customers and 150k orders | Composite index on `customers(city_id, customer_id)` & date index | 8.087 | 52.8% | 2.1&times; | &check; |
-| **W01** | 0.472 | Single-row insert into orders | Single-row insert updating 4 secondary B-tree indexes | 0.575 | -21.8% | 0.8&times; | &check; |
-| **W02** | 13.455 | Subquery sequential scan on 150k orders for store 43 | Subquery resolved via index `idx_orders_store_status_placed` | 0.182 | 98.6% | 73.9&times; | &check; |
-| **W03** | 12.750 | Subquery scan on 150k orders to find oldest packing order | Partial index on `orders` (`status = 'PACKING'`) + rider index | 0.265 | 97.9% | 48.1&times; | &check; |
-| **W04** | 0.752 | Low-stock inventory update for store 43 | Point update via `store_inventory_pkey` | 0.695 | 7.6% | 1.1&times; | &check; |
-| **W05** | 21.555 | Full table scan on 90k movements to find rows < 2026-01-01 | Index range scan on `idx_inventory_movements_moved_at` | 13.386 | 37.9% | 1.6&times; | &check; |
-| **Total** | **2,031.380** | **Baseline Total Runtime** | **Optimized Total Runtime** | **133.341** | **93.4%** | **15.2&times;** | &check; |
-
----
-
-## 3. Proof of Correctness & Equivalence
-
-All query rewrites were validated against the baseline schema to ensure identical result sets (row count, tuple values, and ordering).
-
-### 3.1 Equivalence Proof for Rewritten Queries
-
-For queries where syntax was rewritten (`R15`, `R16`, `R17`, `R19`, `R20`), correctness was verified using bidirectional `EXCEPT` queries:
-```sql
-(SELECT * FROM baseline_query EXCEPT SELECT * FROM rewritten_query)
-UNION ALL
-(SELECT * FROM rewritten_query EXCEPT SELECT * FROM baseline_query);
+```bash
+# Optional fresh control, BEFORE applying indexes:
+bash benchmarks/run_benchmark.sh blinkit_db baseline_control 5
+psql -X -v ON_ERROR_STOP=1 -d blinkit_db -f sql/05_indexes.sql
+python3 benchmarks/verify_cp3.py blinkit_db
+bash benchmarks/run_benchmark.sh blinkit_db optimized 5 sql/06_optimized_queries.sql
 ```
-- **R15:** Output: `0 rows`. (Exact match: 37 rows returned).
-- **R16:** Output: `0 rows`. (Exact match: 19 monthly cohorts returned).
-- **R17:** Output: `0 rows`. (Exact match: 60 city-month pairs returned).
-- **R19:** Output: `0 rows`. (Exact match: 125 Fruits & Vegetables products returned with identical `units_sold`).
-- **R20:** Output: `0 rows`. (Exact match: 30 daily GMV rows returned).
 
-### 3.2 SQL Three-Valued Logic NULL Bug in Query R13
+CP2 before values retain their original three-run averages. CP3 uses five consecutive `EXPLAIN (ANALYZE, BUFFERS)` runs, as the Phase 4 command specifies. Every write runs in its own `BEGIN`/`ROLLBACK`; reads and writes are measured separately, so W02 does not see the rolled-back W01 order. No planner/server settings, materialized caches, or data edits were used. `ANALYZE` follows index creation. No VACUUM was performed for this measurement.
 
-#### The Flaw in Baseline R13
-Baseline `R13` attempts to identify active products that were not used as substitutes during June 2026:
-```sql
-SELECT p.product_id, p.product_name
-FROM products p
-WHERE p.is_active
-  AND p.product_id NOT IN (
-      SELECT oi.substitute_product_id
-      FROM order_items oi JOIN orders o ON o.order_id = oi.order_id
-      WHERE o.placed_at >= '2026-06-01' AND o.placed_at < '2026-07-01'
-  );
-```
-In the baseline database, this query returns **0 rows**, which explains stakeholder Problem **P5** (*"The category team's 'products not used as substitutes this month' list is always empty"*).
+A fresh five-run control on the same host, before index creation, totalled **2035.126 ms**; relative to it, the optimized total improves by **13.24×**. This additional control is saved separately and does not overwrite CP2. Runs are sequential, not mixed concurrently with correctness checks. Cache warmth, background work, and MVCC effects remain sources of variation; these are small-sample measurements, not confidence intervals.
 
-#### Mathematical Cause under ANSI SQL Three-Valued Logic
-The subquery returns all values of `order_items.substitute_product_id`. For lines where no replacement occurred, `substitute_product_id` is `NULL`.
-In ANSI SQL:
-$$\text{val} \text{ NOT IN } \{s_1, s_2, \dots, \text{NULL}\} \iff \neg(\text{val} = s_1 \lor \text{val} = s_2 \lor \dots \lor \text{val} = \text{NULL})$$
-If $\text{val}$ matches any element, the expression evaluates to $\neg(\text{TRUE}) = \text{FALSE}$.
-If $\text{val}$ does not match any known element, the comparison with `NULL` yields `UNKNOWN`, resulting in $\neg(\text{UNKNOWN}) = \text{UNKNOWN}$.
-Because a SQL `WHERE` clause accepts tuples only when the condition evaluates to `TRUE`, all rows evaluate to either `FALSE` or `UNKNOWN`, and the query produces an empty set.
+## All 30 results
 
-#### The Fix
-`R13` was rewritten using `NOT EXISTS`:
-```sql
-SELECT p.product_id, p.product_name
-FROM products p
-WHERE p.is_active
-  AND NOT EXISTS (
-      SELECT 1
-      FROM order_items oi
-      JOIN orders o ON o.order_id = oi.order_id
-      WHERE oi.substitute_product_id = p.product_id
-        AND o.placed_at >= '2026-06-01 00:00:00+05:30' AND o.placed_at < '2026-07-01 00:00:00+05:30'
-  );
-```
-With this fix, the query correctly returns **1,250 active products** that were never used as a substitute in June 2026. The query plan uses an Anti-Join powered by the partial index `idx_order_items_substitute`.
+Improvement = `(before - after) / before × 100`. Negative values indicate regressions. Each timing is traceable to the linked raw plans.
 
----
+| Query | Before (ms) | Problem in baseline plan | Optimization applied | After (ms) | Improvement | Speedup | Same result? |
+|---|---:|---|---|---:|---:|---:|---|
+| R01 | 0.243 | 120-row store scan | Unchanged; sequential scan is appropriate | 0.180 | 25.9% | 1.35× | SQL unchanged |
+| R02 | 1.108 | Small catalogue scan and inventory PK lookup | Unchanged; existing composite inventory PK | 0.998 | 9.9% | 1.11× | SQL unchanged |
+| R03 | 1.577 | Substring scan of 1,500 products | Unchanged; avoid GIN cost on small catalogue | 1.235 | 21.7% | 1.28× | SQL unchanged |
+| R04 | 0.454 | Small store scan plus inventory PK | Unchanged; existing PK lookup | 0.283 | 37.7% | 1.60× | SQL unchanged |
+| R05 | 0.125 | Already a four-item PK lookup | Unchanged; existing PK | 0.098 | 21.6% | 1.28× | SQL unchanged |
+| R06 | 12.113 | Orders sequential scan plus latest-row sort | Customer/timestamp B-tree | 0.176 | 98.5% | 68.82× | SQL unchanged |
+| R07 | 10.117 | Orders sequential scan for rare open statuses | Partial store/timestamp open-order index | 0.282 | 97.2% | 35.88× | SQL unchanged |
+| R08 | 10.510 | Orders sequential scan for June deliveries | Timestamp index range; status remains a filter | 4.775 | 54.6% | 2.20× | SQL unchanged |
+| R09 | 0.543 | PK bitmap scan then low-stock filter | Partial low-stock inventory index; measured regression | 0.730 | -34.4% | 0.74× | SQL unchanged |
+| R10 | 10.836 | Sequential movement scan | Partial covering wastage/date index | 1.339 | 87.6% | 8.09× | SQL unchanged |
+| R11 | 9.052 | Sequential orders scan for store/month | Store/time B-tree bitmap scan | 0.340 | 96.2% | 26.62× | SQL unchanged |
+| R12 | 11.567 | Sequential item scan for one product | Product/order index-only lookup plus existing PK | 3.557 | 69.2% | 3.25× | SQL unchanged |
+| R13 | 19.780 | NOT IN with NULL yields wrong empty result | NOT EXISTS plus partial non-NULL substitute index | 4.317 | 78.2% | 4.58× | Corrected: 0 → 1,250 |
+| R14 | 17.155 | Large item scan and June order join | Date index reduces orders; item sequential scan remains | 19.136 | -11.5% | 0.90× | SQL unchanged |
+| R15 | 8.034 | DATE expression prevents timestamp range access | Equivalent session-local midnight range plus date index | 0.101 | 98.7% | 79.54× | Yes; EXCEPT ALL |
+| R16 | 27.520 | First-order aggregation plus separate EXISTS work | Single aggregation with bool_or; full order scan remains | 22.316 | 18.9% | 1.23× | Yes; EXCEPT ALL |
+| R17 | 27.575 | EXTRACT year filter scans orders | Equivalent year range plus timestamp index | 15.354 | 44.3% | 1.80× | Yes; EXCEPT ALL |
+| R18 | 5.212 | Sequential store-order search | Store/time bitmap scan; existing item PK | 0.679 | 87.0% | 7.68× | SQL unchanged |
+| R19 | 1740.334 | 125 repeated item scans in correlated aggregate | One June aggregation then LEFT JOIN; retain zero sales | 16.933 | 99.0% | 102.78× | Yes; EXCEPT ALL |
+| R20 | 9.239 | Date-cast filter scans orders | Month range plus covering timestamp index | 1.746 | 81.1% | 5.29× | Yes; EXCEPT ALL |
+| R21 | 5.083 | Sequential riders/orders anti-join inputs | Active rider/store index; planner uses timestamp order index | 0.264 | 94.8% | 19.25× | SQL unchanged |
+| R22 | 32.452 | Full scan and sort before deep OFFSET | Covering timestamp index removes sort; OFFSET retained | 14.720 | 54.6% | 2.20× | SQL unchanged |
+| R23 | 0.028 | Already a unique SKU index lookup | Unchanged; small absolute timing noise | 0.062 | -121.4% | 0.45× | SQL unchanged |
+| R24 | 4.611 | Sequential movements scan | Partial covering store/time RESTOCK index | 0.400 | 91.3% | 11.53× | SQL unchanged |
+| R25 | 17.128 | Large customer/orders hash join | Covering date range for orders; customer scan retained | 14.824 | 13.5% | 1.16× | SQL unchanged |
+| W01 | 0.472 | Already a single-row insert | SQL unchanged; secondary-index maintenance added | 0.802 | -69.9% | 0.59× | SQL unchanged |
+| W02 | 13.455 | Sequential orders scan to find max eligible ID | Partial store/order-ID index | 0.644 | 95.2% | 20.89× | SQL unchanged |
+| W03 | 12.750 | PK scan discards non-PACKING rows | Partial packing-ID and active store/rider indexes | 1.179 | 90.8% | 10.81× | SQL unchanged |
+| W04 | 0.752 | Inventory PK bitmap scan then stock filter | Partial low-stock index; membership maintenance costs | 1.840 | -144.7% | 0.41× | SQL unchanged |
+| W05 | 21.555 | Bulk historical movement delete | Sequential scan retained; partial indexes add maintenance | 24.400 | -13.2% | 0.88× | SQL unchanged |
+| **Total** | **2031.380** | | | **153.710** | **92.43%** | **13.22×** | R13 correction excepted |
 
-## 4. Deep-Dive: 5 Biggest Query Plan Improvements
+## Correctness evidence
 
-### 1. R19 (Category Report: Fruits & Vegetables Units Sold)
-- **Baseline Time:** 1,740.334 ms &rarr; **Optimized Time:** 16.400 ms (**106.1&times; speedup / 99.1% reduction**)
-- **Baseline Bottleneck:** Correlated scalar subquery in the `SELECT` list. PostgreSQL executed `SubPlan 1` sequentially 125 times (once per product). Each iteration performed a full table scan on 675,000 `order_items` tuples, generating 767,192 buffer hits (~6.0 GB of memory traffic).
-- **Optimization:** Rewritten into a set-oriented relational `LEFT JOIN` and `GROUP BY`, coupled with the `idx_orders_placed_at` index.
+[`correctness.json`](../benchmarks/results/optimized/correctness.json) records one repeatable-read snapshot comparison using bidirectional `EXCEPT ALL`, counts, and MD5 checksums of canonical sorted JSON rows. `EXCEPT ALL` preserves duplicate multiplicities; it is the primary proof, with the checksum as an additional audit value. The reusable verifier is [`verify_cp3.py`](../benchmarks/verify_cp3.py).
 
-#### Before Plan:
-```
-Sort  (cost=1972131.63..1972131.94 rows=125 width=36) (actual time=1702.610..1702.613 rows=125 loops=1)
+| Query | Reference rows | Optimized rows | Bidirectional difference rows | Checksum match |
+|---|---:|---:|---:|---|
+| R13 | 1250 | 1250 | 0 | Yes |
+| R15 | 36 | 36 | 0 | Yes |
+| R16 | 18 | 18 | 0 | Yes |
+| R17 | 60 | 60 | 0 | Yes |
+| R19 | 125 | 125 | 0 | Yes |
+| R20 | 30 | 30 | 0 | Yes |
+
+R13 is the required correctness exception: the original returns zero rows because its subquery contains NULL. `NOT IN` becomes FALSE for known matches and UNKNOWN for nonmatches; neither passes WHERE. The rewrite correlates `NOT EXISTS` on the substitute product, so NULLs cannot suppress unrelated products. It returns **1,250** active products. An independent reference retains the original `NOT IN` but excludes NULL substitute IDs; this produces the same 1,250 rows and checksum. We do not claim equivalence with the buggy original.
+
+R15/R17/R20 replace date functions with half-open timestamp ranges in the same session timezone. This preserves local calendar-day/month/year boundaries. R16 keeps the original open-ended `>= June 1` activity condition, including future orders. R19 keeps all category products using LEFT JOIN and `coalesce`, including unsold products.
+
+All rewritten ordered queries retain the original ORDER BY expressions. R19 ties in units_sold remain unspecified by SQL; no extra tie-breaker or LIMIT was added. R13 has no order requirement. All remaining 24 SQL statements, including all five writes, are textually identical after comment removal. R22 retains OFFSET rather than changing arbitrary-page navigation to keyset pagination. Existing nonunique ordering in limited original queries is unchanged.
+
+Final database checks in [`environment.json`](../benchmarks/results/optimized/environment.json) confirm the four major row counts above and zero rows for benchmark checkout ID 90000001. Rollbacks preserve logical data, although PostgreSQL can still produce WAL and dead tuples during write measurements.
+
+## Five largest absolute improvements: actual plans
+
+The following are complete first-run plan excerpts, copied from the raw files. Rankings use the reduction in average milliseconds against CP2, excluding the R13 correctness exception; each individual excerpt has its own execution time.
+
+### R19: 1740.334 → 16.933 ms
+
+125 repeated item scans in correlated aggregate. One June aggregation then LEFT JOIN; retain zero sales.
+
+Before: [R19.txt](../benchmarks/results/baseline/R19.txt), run 1.
+
+```text
+Sort  (cost=1972131.63..1972131.94 rows=125 width=36) (actual time=1702.610..1702.613 rows=125.00 loops=1)
   Sort Key: ((SubPlan 1)) DESC
+  Sort Method: quicksort  Memory: 31kB
   Buffers: shared hit=767192
-  ->  Seq Scan on products p  (cost=0.00..1972126.13 rows=125 width=36) (actual time=16.662..1702.567 rows=125 loops=1)
+  InitPlan 2
+    ->  Seq Scan on categories  (cost=0.00..1.15 rows=1 width=4) (actual time=0.003..0.003 rows=1.00 loops=1)
+          Filter: (category_name = 'Fruits & Vegetables'::text)
+          Rows Removed by Filter: 11
+          Buffers: shared hit=1
+  ->  Seq Scan on products p  (cost=0.00..1972126.13 rows=125 width=36) (actual time=16.662..1702.567 rows=125.00 loops=1)
+        Filter: (category_id = (InitPlan 2).col1)
+        Rows Removed by Filter: 1375
+        Buffers: shared hit=767189
         SubPlan 1
-          ->  Aggregate  (cost=15776.69..15776.70 rows=1 width=8) (actual time=13.619..13.619 rows=1 loops=125)
+          ->  Aggregate  (cost=15776.69..15776.70 rows=1 width=8) (actual time=13.619..13.619 rows=1.00 loops=125)
+                Buffers: shared hit=767168
                 ->  Nested Loop  (cost=0.42..15776.63 rows=25 width=4) (actual time=12.892..13.618 rows=24.90 loops=125)
+                      Buffers: shared hit=767168
                       ->  Seq Scan on order_items oi  (cost=0.00..12773.50 rows=450 width=8) (actual time=0.026..13.090 rows=450.34 loops=125)
                             Filter: (product_id = p.product_id)
+                            Rows Removed by Filter: 674550
+                            Buffers: shared hit=542000
                       ->  Index Scan using orders_pkey on orders o  (cost=0.42..6.67 rows=1 width=4) (actual time=0.001..0.001 rows=0.06 loops=56292)
+                            Index Cond: (order_id = oi.order_id)
+                            Filter: ((placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (placed_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
+                            Rows Removed by Filter: 1
+                            Index Searches: 56292
+                            Buffers: shared hit=225168
+Planning:
+  Buffers: shared hit=332
+Planning Time: 0.491 ms
 Execution Time: 1702.644 ms
 ```
 
-#### After Plan:
-```
-Sort  (cost=13452.90..13456.65 rows=1500 width=36) (actual time=15.688..16.402 rows=125 loops=1)
-  Sort Key: (COALESCE(sum(oi.quantity_delivered), '0'::bigint)) DESC
-  Buffers: shared hit=4799
-  ->  HashAggregate  (cost=13358.77..13373.77 rows=1500 width=36) (actual time=15.661..16.384 rows=125 loops=1)
-        ->  Hash Right Join  (cost=1524.70..13343.10 rows=3133 width=32) (actual time=13.179..16.190 rows=3112 loops=1)
-              ->  Gather  (cost=1493.92..13140.03 rows=37593 width=8) (actual time=13.133..15.036 rows=37086 loops=1)
-                    ->  Hash Join  (cost=493.93..8380.73 rows=15664 width=8) (actual time=11.685..12.872 rows=12362 loops=3)
-                          ->  Parallel Seq Scan on order_items oi  (cost=0.00..7148.50 rows=281250 width=12)
-                          ->  Hash  (cost=389.50..389.50 rows=8354 width=4) (actual time=0.838..0.838 rows=8241 loops=3)
-                                ->  Index Scan using idx_orders_placed_at on orders o
-Execution Time: 16.457 ms
-```
+After: [R19.txt](../benchmarks/results/optimized/R19.txt), run 1.
 
----
-
-### 2. R06 (Customer Latest Order Tracking)
-- **Baseline Time:** 12.113 ms &rarr; **Optimized Time:** 0.022 ms (**550.6&times; speedup / 99.8% reduction**)
-- **Baseline Bottleneck:** Lack of secondary index on `orders.customer_id`. PostgreSQL had to perform a full sequential scan across all 150,000 orders to find the matching rows for customer 1027, followed by a top-N sort.
-- **Optimization:** Added composite B-tree index `idx_orders_customer_placed` on `(customer_id, placed_at DESC)`.
-
-#### Before Plan:
-```
-Limit  (cost=4083.02..4083.02 rows=1 width=51) (actual time=18.758..18.759 rows=1 loops=1)
-  Buffers: shared hit=2211
-  ->  Sort  (cost=4083.02..4083.03 rows=4 width=51) (actual time=18.756..18.756 rows=1 loops=1)
-        Sort Key: placed_at DESC
-        ->  Seq Scan on orders  (cost=0.00..4083.00 rows=4 width=51) (actual time=1.288..18.712 rows=9 loops=1)
-              Filter: (customer_id = 1027)
-              Rows Removed by Filter: 149991
-Execution Time: 18.815 ms
-```
-
-#### After Plan:
-```
-Limit  (cost=0.42..5.44 rows=1 width=51) (actual time=0.010..0.010 rows=1 loops=1)
-  Buffers: shared hit=4
-  ->  Index Scan using idx_orders_customer_placed on orders  (cost=0.42..20.49 rows=4 width=51) (actual time=0.009..0.009 rows=1 loops=1)
-        Index Cond: (customer_id = 1027)
-        Index Searches: 1
-Execution Time: 0.021 ms
-```
-
----
-
-### 3. R07 (Dark Store Screen Open Orders)
-- **Baseline Time:** 10.117 ms &rarr; **Optimized Time:** 0.038 ms (**266.2&times; speedup / 99.6% reduction**)
-- **Baseline Bottleneck:** Parallel sequential scan on `orders` (scanning 150,000 tuples, filtering out 149,996 rows) to identify open orders for store 43.
-- **Optimization:** Added composite B-tree index `idx_orders_store_status_placed` on `(store_id, status, placed_at)`.
-
-#### Before Plan:
-```
-Gather Merge  (cost=4641.84..4641.96 rows=1 width=26) (actual time=10.014..11.305 rows=4 loops=1)
-  Buffers: shared hit=2246
-  ->  Sort  (cost=3641.83..3641.84 rows=1 width=26) (actual time=7.819..7.819 rows=2 loops=2)
-        ->  Parallel Seq Scan on orders  (cost=0.00..3641.82 rows=1 width=26) (actual time=7.758..7.792 rows=2 loops=2)
-              Filter: ((store_id = 43) AND (status = ANY ('{PLACED,PACKING,OUT_FOR_DELIVERY}'::text[])))
-              Rows Removed by Filter: 74998
-Execution Time: 11.338 ms
-```
-
-#### After Plan:
-```
-Sort  (cost=17.31..17.32 rows=1 width=26) (actual time=0.031..0.032 rows=4 loops=1)
-  Sort Key: placed_at
-  Buffers: shared hit=9
-  ->  Index Scan using idx_orders_store_status_placed on orders  (cost=0.42..17.30 rows=1 width=26) (actual time=0.015..0.020 rows=4 loops=1)
-        Index Cond: ((store_id = 43) AND (status = ANY ('{PLACED,PACKING,OUT_FOR_DELIVERY}'::text[])))
-        Index Searches: 1
-Execution Time: 0.041 ms
-```
-
----
-
-### 4. W02 (Packing Done Stock Deduction)
-- **Baseline Time:** 13.455 ms &rarr; **Optimized Time:** 0.182 ms (**73.9&times; speedup / 98.6% reduction**)
-- **Baseline Bottleneck:** The subquery `SELECT max(order_id) FROM orders WHERE store_id = 43 AND status IN ('PLACED', 'PACKING')` lacked an index on `(store_id, status)`, triggering a full sequential scan of 150,000 orders on every packing completion event.
-- **Optimization:** The composite index `idx_orders_store_status_placed` resolved the subquery in 0.017 ms, reading only 9 buffer pages instead of 2,208.
-
-#### Before Plan:
-```
-Update on store_inventory si  (cost=4458.73..4515.12 rows=0 width=0) (actual time=14.259..14.260 rows=0 loops=1)
+```text
+Sort  (cost=9970.85..9971.16 rows=125 width=36) (actual time=18.224..18.765 rows=125.00 loops=1)
+  Sort Key: (COALESCE((sum(oi.quantity_delivered)), '0'::bigint)) DESC
+  Sort Method: quicksort  Memory: 31kB
+  Buffers: shared hit=4554
   InitPlan 1
-    ->  Aggregate  (cost=4458.00..4458.01 rows=1 width=4) (actual time=14.069..14.069 rows=1 loops=1)
-          ->  Seq Scan on orders  (cost=0.00..4458.00 rows=1 width=4) (actual time=14.030..14.065 rows=2 loops=1)
+    ->  Seq Scan on categories  (cost=0.00..1.15 rows=1 width=4) (actual time=0.005..0.005 rows=1.00 loops=1)
+          Filter: (category_name = 'Fruits & Vegetables'::text)
+          Rows Removed by Filter: 11
+          Buffers: shared hit=1
+  ->  Hash Right Join  (cost=9931.40..9965.34 rows=125 width=36) (actual time=18.089..18.744 rows=125.00 loops=1)
+        Hash Cond: (oi.product_id = p.product_id)
+        Buffers: shared hit=4551
+        ->  Finalize HashAggregate  (cost=9891.08..9906.08 rows=1500 width=12) (actual time=18.005..18.603 rows=1500.00 loops=1)
+              Group Key: oi.product_id
+              Batches: 1  Memory Usage: 121kB
+              Buffers: shared hit=4530
+              ->  Gather  (cost=9498.08..9873.08 rows=3600 width=12) (actual time=17.525..18.248 rows=4495.00 loops=1)
+                    Workers Planned: 2
+                    Workers Launched: 2
+                    Buffers: shared hit=4530
+                    ->  Partial HashAggregate  (cost=8498.08..8513.08 rows=1500 width=12) (actual time=15.962..16.017 rows=1498.33 loops=3)
+                          Group Key: oi.product_id
+                          Batches: 1  Memory Usage: 121kB
+                          Buffers: shared hit=4530
+                          Worker 0:  Batches: 1  Memory Usage: 121kB
+                          Worker 1:  Batches: 1  Memory Usage: 121kB
+                          ->  Hash Join  (cost=531.39..8418.19 rows=15979 width=8) (actual time=13.787..15.070 rows=12362.00 loops=3)
+                                Hash Cond: (oi.order_id = o.order_id)
+                                Buffers: shared hit=4530
+                                ->  Parallel Seq Scan on order_items oi  (cost=0.00..7148.50 rows=281250 width=12) (actual time=0.004..6.158 rows=225000.00 loops=3)
+                                      Buffers: shared hit=4336
+                                ->  Hash  (cost=424.86..424.86 rows=8522 width=4) (actual time=0.968..0.968 rows=8241.00 loops=3)
+                                      Buckets: 16384  Batches: 1  Memory Usage: 418kB
+                                      Buffers: shared hit=194
+                                      ->  Index Only Scan using idx_orders_placed on orders o  (cost=0.42..424.86 rows=8522 width=4) (actual time=0.021..0.550 rows=8241.00 loops=3)
+                                            Index Cond: ((placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (placed_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
+                                            Heap Fetches: 354
+                                            Index Searches: 3
+                                            Buffers: shared hit=194
+        ->  Hash  (cost=38.75..38.75 rows=125 width=28) (actual time=0.079..0.081 rows=125.00 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 16kB
+              Buffers: shared hit=21
+              ->  Seq Scan on products p  (cost=0.00..38.75 rows=125 width=28) (actual time=0.012..0.075 rows=125.00 loops=1)
+                    Filter: (category_id = (InitPlan 1).col1)
+                    Rows Removed by Filter: 1375
+                    Buffers: shared hit=21
+Planning:
+  Buffers: shared hit=445
+Planning Time: 0.752 ms
+Execution Time: 18.821 ms
+```
+
+
+### R22: 32.452 → 14.720 ms
+
+Full scan and sort before deep OFFSET. Covering timestamp index removes sort; OFFSET retained.
+
+Before: [R22.txt](../benchmarks/results/baseline/R22.txt), run 1.
+
+```text
+Limit  (cost=20955.95..20956.01 rows=25 width=35) (actual time=31.196..31.198 rows=25.00 loops=1)
+  Buffers: shared hit=2211, temp read=763 written=922
+  ->  Sort  (cost=20705.95..21080.95 rows=150000 width=35) (actual time=26.466..29.518 rows=100025.00 loops=1)
+        Sort Key: placed_at DESC
+        Sort Method: external merge  Disk: 7352kB
+        Buffers: shared hit=2211, temp read=763 written=922
+        ->  Seq Scan on orders  (cost=0.00..3708.00 rows=150000 width=35) (actual time=0.006..9.506 rows=150000.00 loops=1)
+              Buffers: shared hit=2208
+Planning:
+  Buffers: shared hit=91
+Planning Time: 0.141 ms
+Execution Time: 33.491 ms
+```
+
+After: [R22.txt](../benchmarks/results/optimized/R22.txt), run 1.
+
+```text
+Limit  (cost=4411.75..4412.86 rows=25 width=35) (actual time=34.386..34.389 rows=25.00 loops=1)
+  Buffers: shared hit=361 read=359
+  ->  Index Only Scan using idx_orders_placed on orders  (cost=0.42..6617.42 rows=150000 width=35) (actual time=0.069..32.065 rows=100025.00 loops=1)
+        Heap Fetches: 118
+        Index Searches: 1
+        Buffers: shared hit=361 read=359
+Planning:
+  Buffers: shared hit=217
+Planning Time: 0.992 ms
+Execution Time: 34.417 ms
+```
+
+
+### W02: 13.455 → 0.644 ms
+
+Sequential orders scan to find max eligible ID. Partial store/order-ID index.
+
+Before: [W02.txt](../benchmarks/results/baseline/W02.txt), run 1.
+
+```text
+Update on store_inventory si  (cost=4458.73..4515.12 rows=0 width=0) (actual time=14.259..14.260 rows=0.00 loops=1)
+  Buffers: shared hit=2284 dirtied=1
+  InitPlan 1
+    ->  Aggregate  (cost=4458.00..4458.01 rows=1 width=4) (actual time=14.069..14.069 rows=1.00 loops=1)
+          Buffers: shared hit=2208
+          ->  Seq Scan on orders  (cost=0.00..4458.00 rows=1 width=4) (actual time=14.030..14.065 rows=2.00 loops=1)
                 Filter: ((status = ANY ('{PLACED,PACKING}'::text[])) AND (store_id = 43))
                 Rows Removed by Filter: 149998
+                Buffers: shared hit=2208
+  ->  Nested Loop  (cost=0.72..57.11 rows=3 width=24) (actual time=14.091..14.105 rows=5.00 loops=1)
+        Buffers: shared hit=2227
+        ->  Index Scan using order_items_pkey on order_items oi  (cost=0.42..15.51 rows=5 width=14) (actual time=14.083..14.084 rows=5.00 loops=1)
+              Index Cond: (order_id = (InitPlan 1).col1)
+              Index Searches: 1
+              Buffers: shared hit=2212
+        ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.29..8.31 rows=1 width=14) (actual time=0.004..0.004 rows=1.00 loops=5)
+              Index Cond: ((store_id = 43) AND (product_id = oi.product_id))
+              Index Searches: 5
+              Buffers: shared hit=15
+Planning:
+  Buffers: shared hit=290
+Planning Time: 0.417 ms
 Execution Time: 14.362 ms
 ```
 
-#### After Plan:
-```
-Update on store_inventory si  (cost=13.60..69.99 rows=0 width=0) (actual time=0.150..0.151 rows=0 loops=1)
-  InitPlan 1
-    ->  Aggregate  (cost=12.87..12.88 rows=1 width=4) (actual time=0.017..0.017 rows=1 loops=1)
-          ->  Index Scan using idx_orders_store_status_placed on orders  (cost=0.42..12.87 rows=1 width=4) (actual time=0.011..0.016 rows=2 loops=1)
-                Index Cond: ((store_id = 43) AND (status = ANY ('{PLACED,PACKING}'::text[])))
-Execution Time: 0.212 ms
-```
+After: [W02.txt](../benchmarks/results/optimized/W02.txt), run 1.
 
----
-
-### 5. W03 (Rider Dispatch: Oldest Packing Order)
-- **Baseline Time:** 12.750 ms &rarr; **Optimized Time:** 0.265 ms (**48.1&times; speedup / 97.9% reduction**)
-- **Baseline Bottleneck:** Subquery `SELECT min(order_id) FROM orders WHERE status = 'PACKING'` scanned `orders_pkey` backward across 149,895 rows searching for the rare `PACKING` status. The rider subquery also performed sequential scans on `riders`.
-- **Optimization:** Added partial B-tree index `idx_orders_packing` on `orders(order_id) WHERE status = 'PACKING'` and composite index `idx_riders_store_status` on `riders(store_id, status, rider_id)`.
-
-#### Before Plan:
-```
-Update on orders o  (cost=163.15..177.92 rows=0 width=0) (actual time=13.367..13.368 rows=0 loops=1)
-  InitPlan 4
-    ->  Result  (cost=162.72..162.73 rows=1 width=4) (actual time=13.218..13.218 rows=1 loops=1)
-          InitPlan 3
-            ->  Limit  (cost=0.42..162.72 rows=1 width=4) (actual time=13.215..13.215 rows=1 loops=1)
-                  ->  Index Scan using orders_pkey on orders  (cost=0.42..6492.42 rows=40 width=4)
-                        Filter: (status = 'PACKING'::text)
-                        Rows Removed by Filter: 149895
-Execution Time: 13.530 ms
-```
-
-#### After Plan:
-```
-Update on orders o  (cost=1.38..10.02 rows=0 width=0) (actual time=0.174..0.174 rows=0 loops=1)
-  InitPlan 4
-    ->  Result  (cost=0.95..0.96 rows=1 width=4) (actual time=0.016..0.016 rows=1 loops=1)
-          InitPlan 3
-            ->  Limit  (cost=0.14..0.95 rows=1 width=4) (actual time=0.015..0.015 rows=1 loops=1)
-                  ->  Index Only Scan using idx_orders_packing on orders  (cost=0.14..12.36 rows=15 width=4)
-Execution Time: 0.265 ms
+```text
+Update on store_inventory si  (cost=8.88..65.27 rows=0 width=0) (actual time=0.502..0.504 rows=0.00 loops=1)
+  Buffers: shared hit=93 dirtied=2
+  InitPlan 2
+    ->  Result  (cost=8.16..8.17 rows=1 width=4) (actual time=0.094..0.096 rows=1.00 loops=1)
+          Buffers: shared hit=8
+          InitPlan 1
+            ->  Limit  (cost=0.14..8.16 rows=1 width=4) (actual time=0.086..0.086 rows=1.00 loops=1)
+                  Buffers: shared hit=8
+                  ->  Index Only Scan using idx_orders_pack_store on orders  (cost=0.14..8.16 rows=1 width=4) (actual time=0.084..0.084 rows=1.00 loops=1)
+                        Index Cond: (store_id = 43)
+                        Heap Fetches: 6
+                        Index Searches: 1
+                        Buffers: shared hit=8
+  ->  Nested Loop  (cost=0.72..57.11 rows=3 width=24) (actual time=0.146..0.185 rows=5.00 loops=1)
+        Buffers: shared hit=27
+        ->  Index Scan using order_items_pkey on order_items oi  (cost=0.42..15.51 rows=5 width=14) (actual time=0.119..0.123 rows=5.00 loops=1)
+              Index Cond: (order_id = (InitPlan 2).col1)
+              Index Searches: 1
+              Buffers: shared hit=12
+        ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.29..8.31 rows=1 width=14) (actual time=0.011..0.011 rows=1.00 loops=5)
+              Index Cond: ((store_id = 43) AND (product_id = oi.product_id))
+              Index Searches: 5
+              Buffers: shared hit=15
+Planning:
+  Buffers: shared hit=486
+Planning Time: 2.090 ms
+Execution Time: 0.724 ms
 ```
 
 
----
+### R17: 27.575 → 15.354 ms
 
-## 5. Write Overhead Analysis
+EXTRACT year filter scans orders. Equivalent year range plus timestamp index.
 
-Indexing tables improves read performance but introduces maintenance overhead during `INSERT`, `UPDATE`, and `DELETE` operations as secondary index trees must be modified.
+Before: [R17.txt](../benchmarks/results/baseline/R17.txt), run 1.
 
-| Write Query | Operation | Target Table | Baseline (ms) | Optimized (ms) | Delta (ms) | Change % | Overhead Analysis & Acceptability |
-|:---|:---|:---|---:|---:|---:|---:|:---|
-| **W01** | `INSERT` | `orders` | 0.472 | 0.575 | +0.103 | +21.8% | **Acceptable:** Inserting a row must now update 4 new secondary B-tree indexes. Total latency remains negligible at **0.58 ms**, well under the **5.0 ms** real-time threshold. |
-| **W02** | `UPDATE` | `store_inventory` | 13.455 | 0.182 | -13.273 | -98.6% | **Substantial Gain:** Subquery index eliminates a 150k sequential scan, overcoming any minute update overhead. |
-| **W03** | `UPDATE` | `orders` | 12.750 | 0.265 | -12.485 | -97.9% | **Substantial Gain:** The partial index `idx_orders_packing` eliminates 149k row checks; only active packing orders are indexed. |
-| **W04** | `UPDATE` | `store_inventory` | 0.752 | 0.695 | -0.057 | -7.6% | **Neutral / Fast:** Updates quantity and timestamp via primary key; no new secondary indexes were placed on inventory stock quantities. |
-| **W05** | `DELETE` | `inventory_movements` | 21.555 | 13.386 | -8.169 | -37.9% | **Net Improvement:** Index range scan quickly locates the 60,258 tuples to delete. The remaining runtime is the unavoidable I/O cost of page dirtying and WAL writes. |
+```text
+GroupAggregate  (cost=4535.86..4554.61 rows=750 width=44) (actual time=24.872..27.550 rows=60.00 loops=1)
+  Group Key: s.city_id, (date_trunc('month'::text, o.placed_at))
+  Buffers: shared hit=2450
+  ->  Sort  (cost=4535.86..4537.74 rows=750 width=15) (actual time=24.797..25.662 rows=49725.00 loops=1)
+        Sort Key: s.city_id, (date_trunc('month'::text, o.placed_at))
+        Sort Method: quicksort  Memory: 3479kB
+        Buffers: shared hit=2450
+        ->  Nested Loop  (cost=0.15..4500.05 rows=750 width=15) (actual time=7.777..21.569 rows=49725.00 loops=1)
+              Buffers: shared hit=2444
+              ->  Seq Scan on orders o  (cost=0.00..4458.00 rows=750 width=15) (actual time=7.764..12.291 rows=49725.00 loops=1)
+                    Filter: (EXTRACT(year FROM placed_at) = '2026'::numeric)
+                    Rows Removed by Filter: 100275
+                    Buffers: shared hit=2208
+              ->  Memoize  (cost=0.15..0.19 rows=1 width=8) (actual time=0.000..0.000 rows=1.00 loops=49725)
+                    Cache Key: o.store_id
+                    Cache Mode: logical
+                    Hits: 49607  Misses: 118  Evictions: 0  Overflows: 0  Memory Usage: 13kB
+                    Buffers: shared hit=236
+                    ->  Index Scan using dark_stores_pkey on dark_stores s  (cost=0.14..0.18 rows=1 width=8) (actual time=0.000..0.000 rows=1.00 loops=118)
+                          Index Cond: (store_id = o.store_id)
+                          Index Searches: 118
+                          Buffers: shared hit=236
+Planning:
+  Buffers: shared hit=206
+Planning Time: 0.305 ms
+Execution Time: 27.579 ms
+```
 
----
+After: [R17.txt](../benchmarks/results/optimized/R17.txt), run 1.
 
-## 6. Index Storage Overhead
+```text
+GroupAggregate  (cost=7358.36..8610.39 rows=50081 width=44) (actual time=12.639..15.247 rows=60.00 loops=1)
+  Group Key: s.city_id, (date_trunc('month'::text, o.placed_at))
+  Buffers: shared hit=1083
+  ->  Sort  (cost=7358.36..7483.56 rows=50081 width=15) (actual time=12.561..13.421 rows=49725.00 loops=1)
+        Sort Key: s.city_id, (date_trunc('month'::text, o.placed_at))
+        Sort Method: quicksort  Memory: 3479kB
+        Buffers: shared hit=1083
+        ->  Hash Join  (cost=5.12..3449.04 rows=50081 width=15) (actual time=0.026..9.195 rows=49725.00 loops=1)
+              Hash Cond: (o.store_id = s.store_id)
+              Buffers: shared hit=1077
+              ->  Index Scan using idx_orders_placed on orders o  (cost=0.42..3183.04 rows=50081 width=15) (actual time=0.003..2.802 rows=49725.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-01-01 00:00:00+05:30'::timestamp with time zone) AND (placed_at < '2027-01-01 00:00:00+05:30'::timestamp with time zone))
+                    Index Searches: 1
+                    Buffers: shared hit=1075
+              ->  Hash  (cost=3.20..3.20 rows=120 width=8) (actual time=0.016..0.016 rows=120.00 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 13kB
+                    Buffers: shared hit=2
+                    ->  Seq Scan on dark_stores s  (cost=0.00..3.20 rows=120 width=8) (actual time=0.004..0.009 rows=120.00 loops=1)
+                          Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=348
+Planning Time: 0.503 ms
+Execution Time: 15.276 ms
+```
 
-All 14 created indexes are listed below, measured using `pg_relation_size()` on PostgreSQL 18.6:
 
-| Table Name | Table Size | Index Name | Index Size | Ratio (% of Table) | Purpose & Queries Served |
-|:---|---:|:---|---:|---:|:---|
-| `order_items` | 34 MB | `idx_order_items_product_order` | 20 MB | 59.9% | Covering B-tree `(product_id, order_id)` for `R12`, `R18`, `R19` |
-| `order_items` | 34 MB | `idx_order_items_substitute` | 120 kB | 0.3% | Partial B-tree for non-null substitutes (`R13`) |
-| `orders` | 17 MB | `idx_orders_store_status_placed` | 5,968 kB | 33.8% | Composite B-tree for `R07`, `R11`, `W02` |
-| `orders` | 17 MB | `idx_orders_customer_placed` | 4,640 kB | 26.3% | Composite B-tree for `R06`, `R16` |
-| `orders` | 17 MB | `idx_orders_rider_placed` | 4,640 kB | 26.3% | Composite B-tree for `R21` |
-| `orders` | 17 MB | `idx_orders_placed_at` | 3,312 kB | 18.8% | B-tree on date for `R08`, `R14`, `R15`, `R17`, `R20`, `R22`, `R25` |
-| `orders` | 17 MB | `idx_orders_packing` | 16 kB | 0.1% | Partial B-tree for `status = 'PACKING'` (`W03`) |
-| `inventory_movements` | 5,632 kB | `idx_inventory_movements_store_type_date` | 3,592 kB | 63.8% | Composite B-tree for store restocks (`R24`) |
-| `inventory_movements` | 5,632 kB | `idx_inventory_movements_moved_at` | 1,984 kB | 35.2% | B-tree for data retention purge (`W05`) |
-| `inventory_movements` | 5,632 kB | `idx_inventory_movements_loss` | 328 kB | 5.8% | Partial B-tree for damage/expiry loss (`R10`) |
-| `customers` | 3,344 kB | `idx_customers_city_id` | 896 kB | 26.8% | Foreign key composite B-tree for `R25` |
-| `products` | 160 kB | `idx_products_name_trgm` | 120 kB | 75.0% | GIN Trigram index for `ILIKE` substring search (`R03`) |
-| `riders` | 136 kB | `idx_riders_store_status` | 80 kB | 58.8% | Composite B-tree for active store riders (`R21`, `W03`) |
-| `products` | 160 kB | `idx_products_category_id` | 32 kB | 20.0% | Foreign key B-tree for `R02`, `R19` |
-| **All New Indexes** | &mdash; | **Total Created Index Storage** | **45.6 MB** | &mdash; | Total footprint of Phase 4 index suite |
+### R06: 12.113 → 0.176 ms
 
-> [!NOTE]
-> The largest index created is `idx_order_items_product_order` (20 MB), which is justified because `order_items` contains 675,000 tuples and inverting the composite primary key `(order_id, product_id)` into `(product_id, order_id)` is strictly necessary to prevent multi-second full table scans across multiple reporting queries.
+Orders sequential scan plus latest-row sort. Customer/timestamp B-tree.
 
----
+Before: [R06.txt](../benchmarks/results/baseline/R06.txt), run 1.
 
-## 7. Queries That Could Not Be Sped Up (and Why)
+```text
+Limit  (cost=4083.02..4083.02 rows=1 width=51) (actual time=18.758..18.759 rows=1.00 loops=1)
+  Buffers: shared hit=2211
+  ->  Sort  (cost=4083.02..4083.03 rows=4 width=51) (actual time=18.756..18.756 rows=1.00 loops=1)
+        Sort Key: placed_at DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=2211
+        ->  Seq Scan on orders  (cost=0.00..4083.00 rows=4 width=51) (actual time=1.288..18.712 rows=9.00 loops=1)
+              Filter: (customer_id = 1027)
+              Rows Removed by Filter: 149991
+              Buffers: shared hit=2208
+Planning:
+  Buffers: shared hit=97
+Planning Time: 0.862 ms
+Execution Time: 18.815 ms
+```
 
-Three queries demonstrated modest percentage improvements (5% to 17%) due to structural computational bounds:
+After: [R06.txt](../benchmarks/results/optimized/R06.txt), run 1.
 
-1. **R14 (Fill Rate per Store: 17.155 ms &rarr; 16.159 ms — 5.8% improvement):**
-   - **Reason:** R14 must calculate the short-fill percentage across all 675,000 order lines for every dark store in June 2026. While `idx_orders_placed_at` restricts the orders considered to June 2026, the query must physically read and evaluate tens of thousands of `order_items` rows to compare `quantity_delivered < quantity_ordered`. In PostgreSQL, an aggregation that touches a large percentage of active data pages cannot bypass sequential I/O cost without pre-aggregated materialized views.
-2. **R16 (Monthly Cohort Retention Analysis: 27.520 ms &rarr; 22.735 ms — 17.4% improvement):**
-   - **Reason:** Calculating customer cohort origin requires computing $\min(\text{placed\_at})$ across every customer in the database. Because every customer's order history must be inspected to determine their first order month, the entire `orders` table (150,000 rows) must be processed. Our rewrite from 40,000 correlated subqueries into a single-pass `GROUP BY` with `bool_or()` achieved maximum algorithmic efficiency for a relational scan, but the physical read of 150,000 rows remains bounded by memory bandwidth.
-3. **R22 (Support Console Deep Offset Pagination: 32.452 ms &rarr; 9.266 ms — 71.4% improvement):**
-   - **Reason:** Query `R22` requests `OFFSET 100000 LIMIT 25`. An index on `orders(placed_at DESC)` eliminated the expensive disk/memory sort node (reducing time from 32.4 ms to 9.2 ms). However, under SQL standard `OFFSET` semantics, the engine must still step through and discard the first 100,000 tuples in the index leaf pages.
-   - **Alternative (Keyset Pagination):** In production systems, replacing `OFFSET 100000` with keyset pagination (`WHERE placed_at < $last_seen_timestamp AND order_id < $last_seen_id ORDER BY placed_at DESC LIMIT 25`) drops latency to **0.05 ms** regardless of page depth.
+```text
+Limit  (cost=0.42..5.44 rows=1 width=51) (actual time=0.605..0.605 rows=1.00 loops=1)
+  Buffers: shared hit=1 read=3
+  ->  Index Scan using idx_orders_customer_placed on orders  (cost=0.42..20.49 rows=4 width=51) (actual time=0.604..0.604 rows=1.00 loops=1)
+        Index Cond: (customer_id = 1027)
+        Index Searches: 1
+        Buffers: shared hit=1 read=3
+Planning:
+  Buffers: shared hit=226
+Planning Time: 1.159 ms
+Execution Time: 0.626 ms
+```
 
----
+## Write overhead
 
-## 8. Artifact & Audit Evidence Links
+Both the original CP2 comparison and fresh five-run control are shown. The control helps distinguish index costs from host/run variability; five samples cannot establish exact causation.
 
-- **Index DDL:** `sql/05_indexes.sql`
-- **Optimized Workload:** `sql/06_optimized_queries.sql`
-- **Optimized Benchmark Summary:** `benchmarks/results/optimized/summary.csv`
-- **Raw Query Plans (All 3 Runs per Query):** `benchmarks/results/optimized/`
-- **Baseline Benchmark Summary:** `benchmarks/results/baseline/summary.csv`
+| Query | CP2 before (ms) | Fresh control (ms) | Optimized (ms) | Delta vs CP2 (ms) | Delta vs control (ms) |
+|---|---:|---:|---:|---:|---:|
+| W01 | 0.472 | 1.654 | 0.802 | +0.330 | -0.852 |
+| W02 | 13.455 | 14.752 | 0.644 | -12.811 | -14.108 |
+| W03 | 12.750 | 11.740 | 1.179 | -11.571 | -10.561 |
+| W04 | 0.752 | 1.190 | 1.840 | +1.088 | +0.650 |
+| W05 | 21.555 | 25.963 | 24.400 | +2.845 | -1.563 |
+
+W01 is slower than CP2 but faster than the fresh control: index maintenance is real, but its exact isolated cost is not established here. A PLACED row enters customer/time, open-store, pack-store, global time, and store/time indexes. W02/W03 lookup savings outweigh maintenance costs.
+
+W04 worsens against both baselines. Its quantity updates change partial-index membership and prevent HOT updates for that indexed dependency. The partial index narrows row discovery but costs extra maintenance; the measured 1.840 ms remains below the seed real-time target of 5 ms. R09 also regresses, so this is a documented trade-off, not a universal improvement. Reconsider this index on CP4 data based on read/write mix.
+
+W05 regresses against CP2 but is slightly faster than the current control. It deletes a large fraction of the table; a sequential scan is sensible and secondary indexes require maintenance. No retention date index was added merely to force an index scan. CP4 must remeasure these choices on the large dataset.
+
+## Index storage and rationale
+
+All 13 new indexes are B-tree indexes. Equality columns precede range/sort columns; partial indexes omit irrelevant statuses or movement types. SQL comments explain each intended query. Sizes below were measured after index creation using `pg_relation_size`, before optimized write benchmarks. Table size means heap only, excluding indexes and TOAST. Exact bytes and DDL are in [`index_storage.csv`](../benchmarks/results/optimized/index_storage.csv).
+
+| Index | Table | Index KiB | Table heap KiB | Index / heap |
+|---|---|---:|---:|---:|
+| `idx_inventory_low_store` | store_inventory | 200.0 | 7680.0 | 2.60% |
+| `idx_items_product_order` | order_items | 14832.0 | 34688.0 | 42.76% |
+| `idx_items_substitute_order` | order_items | 344.0 | 34688.0 | 0.99% |
+| `idx_movements_restock_store_date` | inventory_movements | 2880.0 | 5632.0 | 51.14% |
+| `idx_movements_wastage_date` | inventory_movements | 424.0 | 5632.0 | 7.53% |
+| `idx_orders_customer_placed` | orders | 4640.0 | 17664.0 | 26.27% |
+| `idx_orders_open_store` | orders | 16.0 | 17664.0 | 0.09% |
+| `idx_orders_pack_store` | orders | 16.0 | 17664.0 | 0.09% |
+| `idx_orders_packing_id` | orders | 16.0 | 17664.0 | 0.09% |
+| `idx_orders_placed` | orders | 8624.0 | 17664.0 | 48.82% |
+| `idx_orders_rider_placed` | orders | 4464.0 | 17664.0 | 25.27% |
+| `idx_orders_store_placed` | orders | 4640.0 | 17664.0 | 26.27% |
+| `idx_riders_active_store` | riders | 56.0 | 136.0 | 41.18% |
+
+Total additional index storage: **42,139,648 bytes (40.19 MiB)**. Automatic constraint indexes remain in place (17 originally; 30 total afterward).
+
+The largest index reverses the item PK access direction for R12. INCLUDE on the global orders timestamp index covers the exact R22 output and several reporting inputs. Index-only plans may still visit heap pages when visibility-map bits are unset; the raw plans report heap fetches. The rider/time index is an access option for R21, but the measured seed plan chooses the global date index instead. Its seed speedup must not be attributed to the unused rider/time index; its storage cost is explicit and its value must be reconsidered at scale.
+
+## Remaining limits and measured regressions
+
+- R14 still scans 675,000 item rows in a parallel hash join and is slower than CP2 (17.155 → 19.136 ms). Filtering order dates alone does not remove that item scan. We retain the original SQL and record the regression honestly.
+- R16 needs every customer’s first order and still scans the complete order history; the single-pass rewrite improves it without eliminating that work.
+- R22 avoids the sort but still visits/skips 100,000 index entries. Keyset pagination would require a cursor and change page-jump semantics, so it was not substituted.
+- R01–R05 and R23 were already inexpensive. No new catalogue or spatial index was added. R23 increases from 0.028 to 0.062 ms against CP2 with identical SQL/index access; small absolute changes are sensitive to scheduling and cache state.
+- R09 and W04 regress with the low-stock index as discussed above. CP3 does not claim all queries improved or that seed timings establish CP4 scalability.
+- R13 speedup compares different answer sets, so its primary achievement is correctness rather than a strictly equivalent performance comparison.
+
+## Evidence
+
+- [Index DDL](../sql/05_indexes.sql) and [optimized workload](../sql/06_optimized_queries.sql)
+- [CP2 baseline summary](../benchmarks/results/baseline/summary.csv)
+- [Fresh five-run control](../benchmarks/results/baseline_control/summary.csv) and its 30 raw plan files
+- [Optimized summary](../benchmarks/results/optimized/summary.csv) and its 30 raw plan files (five runs each)
+- [Correctness evidence](../benchmarks/results/optimized/correctness.json), [index storage](../benchmarks/results/optimized/index_storage.csv), and [final environment/counts](../benchmarks/results/optimized/environment.json)

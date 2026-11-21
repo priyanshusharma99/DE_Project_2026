@@ -1,0 +1,170 @@
+=== W03 run 1 ===
+Update on orders o  (cost=163.15..177.92 rows=0 width=0) (actual time=12.832..12.832 rows=0.00 loops=1)
+  Buffers: shared hit=2628 dirtied=1
+  InitPlan 4
+    ->  Result  (cost=162.72..162.73 rows=1 width=4) (actual time=12.672..12.672 rows=1.00 loops=1)
+          Buffers: shared hit=2571
+          InitPlan 3
+            ->  Limit  (cost=0.42..162.72 rows=1 width=4) (actual time=12.668..12.668 rows=1.00 loops=1)
+                  Buffers: shared hit=2571
+                  ->  Index Scan using orders_pkey on orders  (cost=0.42..6492.42 rows=40 width=4) (actual time=12.668..12.668 rows=1.00 loops=1)
+                        Filter: (status = 'PACKING'::text)
+                        Rows Removed by Filter: 149895
+                        Index Searches: 1
+                        Buffers: shared hit=2571
+  ->  Index Scan using orders_pkey on orders o  (cost=0.42..15.19 rows=1 width=58) (actual time=12.696..12.697 rows=1.00 loops=1)
+        Index Cond: (order_id = (InitPlan 4).col1)
+        Index Searches: 1
+        Buffers: shared hit=2580
+        SubPlan 2
+          ->  Result  (cost=6.74..6.75 rows=1 width=4) (actual time=0.011..0.011 rows=1.00 loops=1)
+                Buffers: shared hit=3
+                InitPlan 1
+                  ->  Limit  (cost=0.28..6.74 rows=1 width=4) (actual time=0.011..0.011 rows=1.00 loops=1)
+                        Buffers: shared hit=3
+                        ->  Index Scan using riders_pkey on riders r  (cost=0.28..84.28 rows=13 width=4) (actual time=0.011..0.011 rows=1.00 loops=1)
+                              Filter: ((store_id = o.store_id) AND (status = 'ACTIVE'::text))
+                              Rows Removed by Filter: 36
+                              Index Searches: 1
+                              Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=144
+Planning Time: 0.265 ms
+Trigger for constraint orders_rider_id_fkey: time=0.087 calls=1
+Execution Time: 12.981 ms
+=== W03 run 2 ===
+Update on orders o  (cost=163.15..177.92 rows=0 width=0) (actual time=12.298..12.299 rows=0.00 loops=1)
+  Buffers: shared hit=2628 dirtied=1
+  InitPlan 4
+    ->  Result  (cost=162.72..162.73 rows=1 width=4) (actual time=12.065..12.065 rows=1.00 loops=1)
+          Buffers: shared hit=2571
+          InitPlan 3
+            ->  Limit  (cost=0.42..162.72 rows=1 width=4) (actual time=12.061..12.061 rows=1.00 loops=1)
+                  Buffers: shared hit=2571
+                  ->  Index Scan using orders_pkey on orders  (cost=0.42..6492.42 rows=40 width=4) (actual time=12.060..12.060 rows=1.00 loops=1)
+                        Filter: (status = 'PACKING'::text)
+                        Rows Removed by Filter: 149895
+                        Index Searches: 1
+                        Buffers: shared hit=2571
+  ->  Index Scan using orders_pkey on orders o  (cost=0.42..15.19 rows=1 width=58) (actual time=12.091..12.092 rows=1.00 loops=1)
+        Index Cond: (order_id = (InitPlan 4).col1)
+        Index Searches: 1
+        Buffers: shared hit=2580
+        SubPlan 2
+          ->  Result  (cost=6.74..6.75 rows=1 width=4) (actual time=0.011..0.011 rows=1.00 loops=1)
+                Buffers: shared hit=3
+                InitPlan 1
+                  ->  Limit  (cost=0.28..6.74 rows=1 width=4) (actual time=0.010..0.010 rows=1.00 loops=1)
+                        Buffers: shared hit=3
+                        ->  Index Scan using riders_pkey on riders r  (cost=0.28..84.28 rows=13 width=4) (actual time=0.010..0.010 rows=1.00 loops=1)
+                              Filter: ((store_id = o.store_id) AND (status = 'ACTIVE'::text))
+                              Rows Removed by Filter: 36
+                              Index Searches: 1
+                              Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=144
+Planning Time: 0.278 ms
+Trigger for constraint orders_rider_id_fkey: time=0.106 calls=1
+Execution Time: 12.466 ms
+=== W03 run 3 ===
+Update on orders o  (cost=163.15..177.92 rows=0 width=0) (actual time=11.186..11.187 rows=0.00 loops=1)
+  Buffers: shared hit=2628 dirtied=1
+  InitPlan 4
+    ->  Result  (cost=162.72..162.73 rows=1 width=4) (actual time=11.040..11.040 rows=1.00 loops=1)
+          Buffers: shared hit=2571
+          InitPlan 3
+            ->  Limit  (cost=0.42..162.72 rows=1 width=4) (actual time=11.036..11.036 rows=1.00 loops=1)
+                  Buffers: shared hit=2571
+                  ->  Index Scan using orders_pkey on orders  (cost=0.42..6492.42 rows=40 width=4) (actual time=11.036..11.036 rows=1.00 loops=1)
+                        Filter: (status = 'PACKING'::text)
+                        Rows Removed by Filter: 149895
+                        Index Searches: 1
+                        Buffers: shared hit=2571
+  ->  Index Scan using orders_pkey on orders o  (cost=0.42..15.19 rows=1 width=58) (actual time=11.062..11.063 rows=1.00 loops=1)
+        Index Cond: (order_id = (InitPlan 4).col1)
+        Index Searches: 1
+        Buffers: shared hit=2580
+        SubPlan 2
+          ->  Result  (cost=6.74..6.75 rows=1 width=4) (actual time=0.010..0.010 rows=1.00 loops=1)
+                Buffers: shared hit=3
+                InitPlan 1
+                  ->  Limit  (cost=0.28..6.74 rows=1 width=4) (actual time=0.009..0.009 rows=1.00 loops=1)
+                        Buffers: shared hit=3
+                        ->  Index Scan using riders_pkey on riders r  (cost=0.28..84.28 rows=13 width=4) (actual time=0.009..0.009 rows=1.00 loops=1)
+                              Filter: ((store_id = o.store_id) AND (status = 'ACTIVE'::text))
+                              Rows Removed by Filter: 36
+                              Index Searches: 1
+                              Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=144
+Planning Time: 0.244 ms
+Trigger for constraint orders_rider_id_fkey: time=0.086 calls=1
+Execution Time: 11.333 ms
+=== W03 run 4 ===
+Update on orders o  (cost=163.15..177.92 rows=0 width=0) (actual time=10.705..10.705 rows=0.00 loops=1)
+  Buffers: shared hit=2628 dirtied=1
+  InitPlan 4
+    ->  Result  (cost=162.72..162.73 rows=1 width=4) (actual time=10.574..10.574 rows=1.00 loops=1)
+          Buffers: shared hit=2571
+          InitPlan 3
+            ->  Limit  (cost=0.42..162.72 rows=1 width=4) (actual time=10.571..10.572 rows=1.00 loops=1)
+                  Buffers: shared hit=2571
+                  ->  Index Scan using orders_pkey on orders  (cost=0.42..6492.42 rows=40 width=4) (actual time=10.571..10.571 rows=1.00 loops=1)
+                        Filter: (status = 'PACKING'::text)
+                        Rows Removed by Filter: 149895
+                        Index Searches: 1
+                        Buffers: shared hit=2571
+  ->  Index Scan using orders_pkey on orders o  (cost=0.42..15.19 rows=1 width=58) (actual time=10.593..10.593 rows=1.00 loops=1)
+        Index Cond: (order_id = (InitPlan 4).col1)
+        Index Searches: 1
+        Buffers: shared hit=2580
+        SubPlan 2
+          ->  Result  (cost=6.74..6.75 rows=1 width=4) (actual time=0.010..0.010 rows=1.00 loops=1)
+                Buffers: shared hit=3
+                InitPlan 1
+                  ->  Limit  (cost=0.28..6.74 rows=1 width=4) (actual time=0.009..0.009 rows=1.00 loops=1)
+                        Buffers: shared hit=3
+                        ->  Index Scan using riders_pkey on riders r  (cost=0.28..84.28 rows=13 width=4) (actual time=0.009..0.009 rows=1.00 loops=1)
+                              Filter: ((store_id = o.store_id) AND (status = 'ACTIVE'::text))
+                              Rows Removed by Filter: 36
+                              Index Searches: 1
+                              Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=144
+Planning Time: 0.252 ms
+Trigger for constraint orders_rider_id_fkey: time=0.068 calls=1
+Execution Time: 10.834 ms
+=== W03 run 5 ===
+Update on orders o  (cost=163.15..177.92 rows=0 width=0) (actual time=10.957..10.957 rows=0.00 loops=1)
+  Buffers: shared hit=2628 dirtied=1
+  InitPlan 4
+    ->  Result  (cost=162.72..162.73 rows=1 width=4) (actual time=10.821..10.821 rows=1.00 loops=1)
+          Buffers: shared hit=2571
+          InitPlan 3
+            ->  Limit  (cost=0.42..162.72 rows=1 width=4) (actual time=10.818..10.819 rows=1.00 loops=1)
+                  Buffers: shared hit=2571
+                  ->  Index Scan using orders_pkey on orders  (cost=0.42..6492.42 rows=40 width=4) (actual time=10.818..10.818 rows=1.00 loops=1)
+                        Filter: (status = 'PACKING'::text)
+                        Rows Removed by Filter: 149895
+                        Index Searches: 1
+                        Buffers: shared hit=2571
+  ->  Index Scan using orders_pkey on orders o  (cost=0.42..15.19 rows=1 width=58) (actual time=10.840..10.841 rows=1.00 loops=1)
+        Index Cond: (order_id = (InitPlan 4).col1)
+        Index Searches: 1
+        Buffers: shared hit=2580
+        SubPlan 2
+          ->  Result  (cost=6.74..6.75 rows=1 width=4) (actual time=0.009..0.009 rows=1.00 loops=1)
+                Buffers: shared hit=3
+                InitPlan 1
+                  ->  Limit  (cost=0.28..6.74 rows=1 width=4) (actual time=0.009..0.009 rows=1.00 loops=1)
+                        Buffers: shared hit=3
+                        ->  Index Scan using riders_pkey on riders r  (cost=0.28..84.28 rows=13 width=4) (actual time=0.009..0.009 rows=1.00 loops=1)
+                              Filter: ((store_id = o.store_id) AND (status = 'ACTIVE'::text))
+                              Rows Removed by Filter: 36
+                              Index Searches: 1
+                              Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=144
+Planning Time: 0.250 ms
+Trigger for constraint orders_rider_id_fkey: time=0.069 calls=1
+Execution Time: 11.084 ms

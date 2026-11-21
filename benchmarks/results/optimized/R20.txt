@@ -1,66 +1,115 @@
 === R20 run 1 ===
-WindowAgg  (cost=950.84..1251.71 rows=8024 width=68) (actual time=1.468..1.912 rows=31.00 loops=1)
+WindowAgg  (cost=999.31..1306.55 rows=8194 width=68) (actual time=1.117..1.551 rows=30.00 loops=1)
   Window: w1 AS (ORDER BY ((orders.placed_at)::date))
   Storage: Memory  Maximum Storage: 17kB
-  Buffers: shared hit=148
-  ->  GroupAggregate  (cost=950.81..1131.35 rows=8024 width=36) (actual time=1.447..1.897 rows=31.00 loops=1)
+  Buffers: shared hit=67
+  ->  GroupAggregate  (cost=999.27..1183.64 rows=8194 width=36) (actual time=1.097..1.535 rows=30.00 loops=1)
         Group Key: ((orders.placed_at)::date)
-        Buffers: shared hit=148
-        ->  Sort  (cost=950.81..970.87 rows=8024 width=9) (actual time=1.432..1.572 rows=7815.00 loops=1)
+        Buffers: shared hit=67
+        ->  Sort  (cost=999.27..1019.76 rows=8194 width=9) (actual time=1.075..1.226 rows=7815.00 loops=1)
               Sort Key: ((orders.placed_at)::date)
               Sort Method: quicksort  Memory: 437kB
-              Buffers: shared hit=148
-              ->  Index Scan using idx_orders_placed_at on orders  (cost=0.42..430.44 rows=8024 width=9) (actual time=0.019..1.140 rows=7815.00 loops=1)
-                    Index Cond: ((placed_at >= '2026-05-31 11:30:00-07'::timestamp with time zone) AND (placed_at < '2026-06-30 11:30:00-07'::timestamp with time zone))
+              Buffers: shared hit=67
+              ->  Index Only Scan using idx_orders_placed on orders  (cost=0.42..466.65 rows=8194 width=9) (actual time=0.011..0.774 rows=7815.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (placed_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
                     Filter: (status = 'DELIVERED'::text)
                     Rows Removed by Filter: 426
+                    Heap Fetches: 118
                     Index Searches: 1
-                    Buffers: shared hit=145
+                    Buffers: shared hit=64
 Planning:
-  Buffers: shared hit=257
-Planning Time: 0.340 ms
-Execution Time: 1.940 ms
+  Buffers: shared hit=294
+Planning Time: 0.409 ms
+Execution Time: 1.580 ms
 === R20 run 2 ===
-WindowAgg  (cost=950.84..1251.71 rows=8024 width=68) (actual time=1.361..1.763 rows=31.00 loops=1)
+WindowAgg  (cost=999.31..1306.55 rows=8194 width=68) (actual time=1.182..1.631 rows=30.00 loops=1)
   Window: w1 AS (ORDER BY ((orders.placed_at)::date))
   Storage: Memory  Maximum Storage: 17kB
-  Buffers: shared hit=148
-  ->  GroupAggregate  (cost=950.81..1131.35 rows=8024 width=36) (actual time=1.343..1.751 rows=31.00 loops=1)
+  Buffers: shared hit=67
+  ->  GroupAggregate  (cost=999.27..1183.64 rows=8194 width=36) (actual time=1.160..1.616 rows=30.00 loops=1)
         Group Key: ((orders.placed_at)::date)
-        Buffers: shared hit=148
-        ->  Sort  (cost=950.81..970.87 rows=8024 width=9) (actual time=1.329..1.459 rows=7815.00 loops=1)
+        Buffers: shared hit=67
+        ->  Sort  (cost=999.27..1019.76 rows=8194 width=9) (actual time=1.136..1.284 rows=7815.00 loops=1)
               Sort Key: ((orders.placed_at)::date)
               Sort Method: quicksort  Memory: 437kB
-              Buffers: shared hit=148
-              ->  Index Scan using idx_orders_placed_at on orders  (cost=0.42..430.44 rows=8024 width=9) (actual time=0.018..1.058 rows=7815.00 loops=1)
-                    Index Cond: ((placed_at >= '2026-05-31 11:30:00-07'::timestamp with time zone) AND (placed_at < '2026-06-30 11:30:00-07'::timestamp with time zone))
+              Buffers: shared hit=67
+              ->  Index Only Scan using idx_orders_placed on orders  (cost=0.42..466.65 rows=8194 width=9) (actual time=0.012..0.815 rows=7815.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (placed_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
                     Filter: (status = 'DELIVERED'::text)
                     Rows Removed by Filter: 426
+                    Heap Fetches: 118
                     Index Searches: 1
-                    Buffers: shared hit=145
+                    Buffers: shared hit=64
 Planning:
-  Buffers: shared hit=257
-Planning Time: 0.315 ms
-Execution Time: 1.790 ms
+  Buffers: shared hit=294
+Planning Time: 0.412 ms
+Execution Time: 1.664 ms
 === R20 run 3 ===
-WindowAgg  (cost=950.84..1251.71 rows=8024 width=68) (actual time=1.377..1.781 rows=31.00 loops=1)
+WindowAgg  (cost=999.31..1306.55 rows=8194 width=68) (actual time=1.277..1.737 rows=30.00 loops=1)
   Window: w1 AS (ORDER BY ((orders.placed_at)::date))
   Storage: Memory  Maximum Storage: 17kB
-  Buffers: shared hit=148
-  ->  GroupAggregate  (cost=950.81..1131.35 rows=8024 width=36) (actual time=1.359..1.768 rows=31.00 loops=1)
+  Buffers: shared hit=67
+  ->  GroupAggregate  (cost=999.27..1183.64 rows=8194 width=36) (actual time=1.255..1.715 rows=30.00 loops=1)
         Group Key: ((orders.placed_at)::date)
-        Buffers: shared hit=148
-        ->  Sort  (cost=950.81..970.87 rows=8024 width=9) (actual time=1.345..1.473 rows=7815.00 loops=1)
+        Buffers: shared hit=67
+        ->  Sort  (cost=999.27..1019.76 rows=8194 width=9) (actual time=1.231..1.386 rows=7815.00 loops=1)
               Sort Key: ((orders.placed_at)::date)
               Sort Method: quicksort  Memory: 437kB
-              Buffers: shared hit=148
-              ->  Index Scan using idx_orders_placed_at on orders  (cost=0.42..430.44 rows=8024 width=9) (actual time=0.016..1.075 rows=7815.00 loops=1)
-                    Index Cond: ((placed_at >= '2026-05-31 11:30:00-07'::timestamp with time zone) AND (placed_at < '2026-06-30 11:30:00-07'::timestamp with time zone))
+              Buffers: shared hit=67
+              ->  Index Only Scan using idx_orders_placed on orders  (cost=0.42..466.65 rows=8194 width=9) (actual time=0.012..0.893 rows=7815.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (placed_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
                     Filter: (status = 'DELIVERED'::text)
                     Rows Removed by Filter: 426
+                    Heap Fetches: 118
                     Index Searches: 1
-                    Buffers: shared hit=145
+                    Buffers: shared hit=64
 Planning:
-  Buffers: shared hit=257
-Planning Time: 0.307 ms
-Execution Time: 1.808 ms
+  Buffers: shared hit=294
+Planning Time: 0.414 ms
+Execution Time: 1.775 ms
+=== R20 run 4 ===
+WindowAgg  (cost=999.31..1306.55 rows=8194 width=68) (actual time=1.338..1.753 rows=30.00 loops=1)
+  Window: w1 AS (ORDER BY ((orders.placed_at)::date))
+  Storage: Memory  Maximum Storage: 17kB
+  Buffers: shared hit=67
+  ->  GroupAggregate  (cost=999.27..1183.64 rows=8194 width=36) (actual time=1.313..1.736 rows=30.00 loops=1)
+        Group Key: ((orders.placed_at)::date)
+        Buffers: shared hit=67
+        ->  Sort  (cost=999.27..1019.76 rows=8194 width=9) (actual time=1.291..1.434 rows=7815.00 loops=1)
+              Sort Key: ((orders.placed_at)::date)
+              Sort Method: quicksort  Memory: 437kB
+              Buffers: shared hit=67
+              ->  Index Only Scan using idx_orders_placed on orders  (cost=0.42..466.65 rows=8194 width=9) (actual time=0.013..0.900 rows=7815.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (placed_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
+                    Filter: (status = 'DELIVERED'::text)
+                    Rows Removed by Filter: 426
+                    Heap Fetches: 118
+                    Index Searches: 1
+                    Buffers: shared hit=64
+Planning:
+  Buffers: shared hit=294
+Planning Time: 0.391 ms
+Execution Time: 1.786 ms
+=== R20 run 5 ===
+WindowAgg  (cost=999.31..1306.55 rows=8194 width=68) (actual time=1.421..1.889 rows=30.00 loops=1)
+  Window: w1 AS (ORDER BY ((orders.placed_at)::date))
+  Storage: Memory  Maximum Storage: 17kB
+  Buffers: shared hit=67
+  ->  GroupAggregate  (cost=999.27..1183.64 rows=8194 width=36) (actual time=1.399..1.873 rows=30.00 loops=1)
+        Group Key: ((orders.placed_at)::date)
+        Buffers: shared hit=67
+        ->  Sort  (cost=999.27..1019.76 rows=8194 width=9) (actual time=1.378..1.553 rows=7815.00 loops=1)
+              Sort Key: ((orders.placed_at)::date)
+              Sort Method: quicksort  Memory: 437kB
+              Buffers: shared hit=67
+              ->  Index Only Scan using idx_orders_placed on orders  (cost=0.42..466.65 rows=8194 width=9) (actual time=0.015..1.009 rows=7815.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (placed_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
+                    Filter: (status = 'DELIVERED'::text)
+                    Rows Removed by Filter: 426
+                    Heap Fetches: 118
+                    Index Searches: 1
+                    Buffers: shared hit=64
+Planning:
+  Buffers: shared hit=294
+Planning Time: 0.400 ms
+Execution Time: 1.926 ms

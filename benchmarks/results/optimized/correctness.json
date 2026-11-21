@@ -1,0 +1,90 @@
+{
+  "rewritten": [
+    {
+      "query": "R13",
+      "reference": "NULL-filtered original",
+      "old_rows": 1250,
+      "new_rows": 1250,
+      "difference_rows": 0,
+      "old_checksum": "ef1eb8e0f54615571d151b890d5e6c0c",
+      "new_checksum": "ef1eb8e0f54615571d151b890d5e6c0c"
+    },
+    {
+      "query": "R15",
+      "reference": "original",
+      "old_rows": 36,
+      "new_rows": 36,
+      "difference_rows": 0,
+      "old_checksum": "f8889616f1f87f70aa15461fa0828af7",
+      "new_checksum": "f8889616f1f87f70aa15461fa0828af7"
+    },
+    {
+      "query": "R16",
+      "reference": "original",
+      "old_rows": 18,
+      "new_rows": 18,
+      "difference_rows": 0,
+      "old_checksum": "4b4e2dca070c99295efb393dcb2e1a38",
+      "new_checksum": "4b4e2dca070c99295efb393dcb2e1a38"
+    },
+    {
+      "query": "R17",
+      "reference": "original",
+      "old_rows": 60,
+      "new_rows": 60,
+      "difference_rows": 0,
+      "old_checksum": "e5f636f9c9c52634dc3f39f0beef8cae",
+      "new_checksum": "e5f636f9c9c52634dc3f39f0beef8cae"
+    },
+    {
+      "query": "R19",
+      "reference": "original",
+      "old_rows": 125,
+      "new_rows": 125,
+      "difference_rows": 0,
+      "old_checksum": "1322f6e8998b8d2943dde3d8565822d8",
+      "new_checksum": "1322f6e8998b8d2943dde3d8565822d8"
+    },
+    {
+      "query": "R20",
+      "reference": "original",
+      "old_rows": 30,
+      "new_rows": 30,
+      "difference_rows": 0,
+      "old_checksum": "90502244db2de99094b060b995fcc7f3",
+      "new_checksum": "90502244db2de99094b060b995fcc7f3"
+    },
+    {
+      "query": "R13_original",
+      "rows": 0
+    }
+  ],
+  "unchanged_queries": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R08",
+    "R09",
+    "R10",
+    "R11",
+    "R12",
+    "R14",
+    "R18",
+    "R21",
+    "R22",
+    "R23",
+    "R24",
+    "R25",
+    "W01",
+    "W02",
+    "W03",
+    "W04",
+    "W05"
+  ],
+  "ordering": "R15/R16/R17/R19/R20 retain identical ORDER BY keys; SQL leaves rows tied on those keys unordered. R13 has no ORDER BY.",
+  "write_queries": "All five write statements are textually unchanged; benchmark runs use individual BEGIN/ROLLBACK transactions."
+}
