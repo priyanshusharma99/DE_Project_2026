@@ -23,11 +23,36 @@
 | Role | Name | Enrollment No. | GitHub Username |
 |------|------|----------------|-----------------|
 | Group Lead | Priyanshu Sharma| 2501010358| priyanshusharma99|
-| Member 2 | Manjeet Lodha| 25010259| Manjeet-cse|
+| Member 2 | Manjeet Lodha| 2501010259| Manjeet-cse|
 | Member 3 | Anurag Sonawane| 2501010561| Anurag-Sonawane|
 | Member 4 | Srijal Srivastava| 2501010457| Srijal-SS|
 
-**Team No.:** T0013 · **Section:** ____ · **Repository URL:** https://github.com/priyanshusharma99/DE_Project_2026.git
+**Team No.:** T0013 · **Section:** D · **Repository URL:** https://github.com/priyanshusharma99/DE_Project_2026.git
+
+---
+
+## Headline Results & Benchmark Summary
+
+| Milestone | Checkpoint | Dataset Scale | Workload Latency Sum | Key Achievements |
+|---|---|---|---:|---|
+| **CP0** | Setup | — | — | Project workspace initialized, `team.json` configured, benchmark harness set up |
+| **CP1** | Schema & Load | 1.08M rows (161 MB) | — | 3NF compliant relational schema loaded with 12+ strict constraints and valid sequences |
+| **CP2** | Baseline | 1.08M rows (161 MB) | 2,031.38 ms | Baseline query execution times recorded under `EXPLAIN (ANALYZE, BUFFERS)` |
+| **CP3** | Optimization | 1.08M rows (161 MB) | **153.71 ms** | **13.2× workload speedup (92.4% reduction)** via targeted indexes & rewritten queries; R13 corrected |
+| **CP4** | Scalability | 19.33M rows (2.45 GB) | All SLAs Met | **100% of queries satisfy Phase 5 SLAs** (<5ms real-time, <250ms interactive, <5000ms analytics); partitioning DDL verified |
+
+### Quick Reproduction Commands
+
+```bash
+# 1. Run CP4 audit suite to verify deliverables and SLA compliance
+python3 benchmarks/verify_cp4.py
+
+# 2. Run benchmark on large dataset (requires active PostgreSQL instance with large_data loaded)
+bash benchmarks/run_benchmark.sh blinkit_db large 3 sql/06_optimized_queries.sql
+
+# 3. Test declarative partitioning DDL and verify partition pruning
+psql -d blinkit_db -f sql/08_partitioning.sql
+```
 
 ---
 
