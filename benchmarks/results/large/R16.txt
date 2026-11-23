@@ -1,0 +1,60 @@
+=== R16 run 1 ===
+Sort  (cost=314730.82..314731.32 rows=200 width=24) (actual time=4133.551..4133.552 rows=18.00 loops=1)
+  Sort Key: (date_trunc('month'::text, min(orders.placed_at)))
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=1097757 read=1913629 written=3558
+  ->  HashAggregate  (cost=314721.18..314723.18 rows=200 width=24) (actual time=4133.539..4133.540 rows=18.00 loops=1)
+        Group Key: date_trunc('month'::text, min(orders.placed_at))
+        Batches: 1  Memory Usage: 32kB
+        Buffers: shared hit=1097754 read=1913629 written=3558
+        ->  GroupAggregate  (cost=0.43..303758.71 rows=626427 width=13) (actual time=0.057..4081.422 rows=781101.00 loops=1)
+              Group Key: orders.customer_id
+              Buffers: shared hit=1097754 read=1913629 written=3558
+              ->  Index Only Scan using idx_orders_customer_placed on orders  (cost=0.43..265925.03 rows=3000334 width=12) (actual time=0.024..3858.601 rows=3000000.00 loops=1)
+                    Heap Fetches: 3000000
+                    Index Searches: 1
+                    Buffers: shared hit=1097754 read=1913629 written=3558
+Planning:
+  Buffers: shared hit=235 read=1
+Planning Time: 0.391 ms
+Execution Time: 4133.599 ms
+=== R16 run 2 ===
+Sort  (cost=314730.82..314731.32 rows=200 width=24) (actual time=4099.332..4099.333 rows=18.00 loops=1)
+  Sort Key: (date_trunc('month'::text, min(orders.placed_at)))
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=1105060 read=1906326 written=3462
+  ->  HashAggregate  (cost=314721.18..314723.18 rows=200 width=24) (actual time=4099.322..4099.324 rows=18.00 loops=1)
+        Group Key: date_trunc('month'::text, min(orders.placed_at))
+        Batches: 1  Memory Usage: 32kB
+        Buffers: shared hit=1105057 read=1906326 written=3462
+        ->  GroupAggregate  (cost=0.43..303758.71 rows=626427 width=13) (actual time=0.042..4047.193 rows=781101.00 loops=1)
+              Group Key: orders.customer_id
+              Buffers: shared hit=1105057 read=1906326 written=3462
+              ->  Index Only Scan using idx_orders_customer_placed on orders  (cost=0.43..265925.03 rows=3000334 width=12) (actual time=0.017..3822.659 rows=3000000.00 loops=1)
+                    Heap Fetches: 3000000
+                    Index Searches: 1
+                    Buffers: shared hit=1105057 read=1906326 written=3462
+Planning:
+  Buffers: shared hit=198 read=38
+Planning Time: 0.603 ms
+Execution Time: 4099.372 ms
+=== R16 run 3 ===
+Sort  (cost=314730.82..314731.32 rows=200 width=24) (actual time=3655.218..3655.220 rows=18.00 loops=1)
+  Sort Key: (date_trunc('month'::text, min(orders.placed_at)))
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=1573898 read=1619491 written=3238
+  ->  HashAggregate  (cost=314721.18..314723.18 rows=200 width=24) (actual time=3655.208..3655.210 rows=18.00 loops=1)
+        Group Key: date_trunc('month'::text, min(orders.placed_at))
+        Batches: 1  Memory Usage: 32kB
+        Buffers: shared hit=1573895 read=1619491 written=3238
+        ->  GroupAggregate  (cost=0.43..303758.71 rows=626427 width=13) (actual time=0.063..3603.023 rows=781101.00 loops=1)
+              Group Key: orders.customer_id
+              Buffers: shared hit=1573895 read=1619491 written=3238
+              ->  Index Only Scan using idx_orders_customer_placed on orders  (cost=0.43..265925.03 rows=3000334 width=12) (actual time=0.033..3378.377 rows=3000000.00 loops=1)
+                    Heap Fetches: 2712701
+                    Index Searches: 1
+                    Buffers: shared hit=1573895 read=1619491 written=3238
+Planning:
+  Buffers: shared hit=198 read=38
+Planning Time: 0.608 ms
+Execution Time: 3655.259 ms

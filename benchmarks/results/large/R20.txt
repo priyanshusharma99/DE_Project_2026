@@ -1,0 +1,69 @@
+=== R20 run 1 ===
+WindowAgg  (cost=27388.35..33270.75 rows=156865 width=68) (actual time=30.971..40.393 rows=30.00 loops=1)
+  Window: w1 AS (ORDER BY ((orders.placed_at)::date))
+  Storage: Memory  Maximum Storage: 17kB
+  Buffers: shared hit=3579, temp read=365 written=367
+  ->  GroupAggregate  (cost=27388.32..30917.78 rows=156865 width=36) (actual time=30.611..40.372 rows=30.00 loops=1)
+        Group Key: ((orders.placed_at)::date)
+        Buffers: shared hit=3579, temp read=365 written=367
+        ->  Sort  (cost=27388.32..27780.48 rows=156865 width=9) (actual time=30.249..34.433 rows=156013.00 loops=1)
+              Sort Key: ((orders.placed_at)::date)
+              Sort Method: external merge  Disk: 2920kB
+              Buffers: shared hit=3579, temp read=365 written=367
+              ->  Index Only Scan using idx_orders_placed on orders  (cost=0.43..11170.52 rows=156865 width=9) (actual time=0.192..22.091 rows=156013.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (placed_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
+                    Filter: (status = 'DELIVERED'::text)
+                    Rows Removed by Filter: 8822
+                    Heap Fetches: 164835
+                    Index Searches: 1
+                    Buffers: shared hit=3576
+Planning:
+  Buffers: shared hit=288 read=5
+Planning Time: 0.579 ms
+Execution Time: 41.276 ms
+=== R20 run 2 ===
+WindowAgg  (cost=27388.35..33270.75 rows=156865 width=68) (actual time=30.910..40.354 rows=30.00 loops=1)
+  Window: w1 AS (ORDER BY ((orders.placed_at)::date))
+  Storage: Memory  Maximum Storage: 17kB
+  Buffers: shared hit=3579, temp read=365 written=367
+  ->  GroupAggregate  (cost=27388.32..30917.78 rows=156865 width=36) (actual time=30.548..40.332 rows=30.00 loops=1)
+        Group Key: ((orders.placed_at)::date)
+        Buffers: shared hit=3579, temp read=365 written=367
+        ->  Sort  (cost=27388.32..27780.48 rows=156865 width=9) (actual time=30.184..34.363 rows=156013.00 loops=1)
+              Sort Key: ((orders.placed_at)::date)
+              Sort Method: external merge  Disk: 2920kB
+              Buffers: shared hit=3579, temp read=365 written=367
+              ->  Index Only Scan using idx_orders_placed on orders  (cost=0.43..11170.52 rows=156865 width=9) (actual time=0.180..22.100 rows=156013.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (placed_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
+                    Filter: (status = 'DELIVERED'::text)
+                    Rows Removed by Filter: 8822
+                    Heap Fetches: 164835
+                    Index Searches: 1
+                    Buffers: shared hit=3576
+Planning:
+  Buffers: shared hit=293
+Planning Time: 0.430 ms
+Execution Time: 40.988 ms
+=== R20 run 3 ===
+WindowAgg  (cost=27388.35..33270.75 rows=156865 width=68) (actual time=30.315..39.785 rows=30.00 loops=1)
+  Window: w1 AS (ORDER BY ((orders.placed_at)::date))
+  Storage: Memory  Maximum Storage: 17kB
+  Buffers: shared hit=3579, temp read=365 written=367
+  ->  GroupAggregate  (cost=27388.32..30917.78 rows=156865 width=36) (actual time=29.952..39.767 rows=30.00 loops=1)
+        Group Key: ((orders.placed_at)::date)
+        Buffers: shared hit=3579, temp read=365 written=367
+        ->  Sort  (cost=27388.32..27780.48 rows=156865 width=9) (actual time=29.591..33.797 rows=156013.00 loops=1)
+              Sort Key: ((orders.placed_at)::date)
+              Sort Method: external merge  Disk: 2920kB
+              Buffers: shared hit=3579, temp read=365 written=367
+              ->  Index Only Scan using idx_orders_placed on orders  (cost=0.43..11170.52 rows=156865 width=9) (actual time=0.177..21.580 rows=156013.00 loops=1)
+                    Index Cond: ((placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (placed_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
+                    Filter: (status = 'DELIVERED'::text)
+                    Rows Removed by Filter: 8822
+                    Heap Fetches: 164835
+                    Index Searches: 1
+                    Buffers: shared hit=3576
+Planning:
+  Buffers: shared hit=293
+Planning Time: 0.429 ms
+Execution Time: 40.376 ms

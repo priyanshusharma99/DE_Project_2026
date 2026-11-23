@@ -1,0 +1,132 @@
+=== R18 run 1 ===
+Sort  (cost=5655.29..5658.56 rows=1305 width=32) (actual time=10.683..10.697 rows=687.00 loops=1)
+  Sort Key: si.quantity_on_hand DESC
+  Sort Method: quicksort  Memory: 59kB
+  Buffers: shared hit=137 read=621
+  ->  Hash Right Anti Join  (cost=3416.07..5587.76 rows=1305 width=32) (actual time=10.580..10.617 rows=687.00 loops=1)
+        Hash Cond: (oi.product_id = si.product_id)
+        Buffers: shared hit=134 read=621
+        ->  Nested Loop  (cost=5.59..2137.50 rows=260 width=4) (actual time=0.224..8.194 rows=338.00 loops=1)
+              Buffers: shared hit=134 read=216
+              ->  Bitmap Heap Scan on orders o  (cost=5.16..281.64 rows=71 width=4) (actual time=0.032..0.169 rows=69.00 loops=1)
+                    Recheck Cond: ((store_id = 43) AND (placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone))
+                    Heap Blocks: exact=69
+                    Buffers: shared hit=1 read=72
+                    ->  Bitmap Index Scan on idx_orders_store_placed  (cost=0.00..5.14 rows=71 width=0) (actual time=0.015..0.016 rows=69.00 loops=1)
+                          Index Cond: ((store_id = 43) AND (placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone))
+                          Index Searches: 1
+                          Buffers: shared hit=1 read=3
+              ->  Index Only Scan using order_items_pkey on order_items oi  (cost=0.43..26.03 rows=11 width=8) (actual time=0.116..0.116 rows=4.90 loops=69)
+                    Index Cond: (order_id = o.order_id)
+                    Heap Fetches: 338
+                    Index Searches: 69
+                    Buffers: shared hit=133 read=144
+        ->  Hash  (cost=3393.99..3393.99 rows=1319 width=36) (actual time=2.342..2.342 rows=975.00 loops=1)
+              Buckets: 2048  Batches: 1  Memory Usage: 82kB
+              Buffers: shared read=405
+              ->  Hash Join  (cost=2625.22..3393.99 rows=1319 width=36) (actual time=0.228..2.278 rows=975.00 loops=1)
+                    Hash Cond: (p.product_id = si.product_id)
+                    Buffers: shared read=405
+                    ->  Seq Scan on products p  (cost=0.00..690.00 rows=30000 width=28) (actual time=0.027..1.091 rows=30000.00 loops=1)
+                          Buffers: shared read=390
+                    ->  Hash  (cost=2608.74..2608.74 rows=1319 width=8) (actual time=0.197..0.197 rows=975.00 loops=1)
+                          Buckets: 2048  Batches: 1  Memory Usage: 55kB
+                          Buffers: shared read=15
+                          ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.43..2608.74 rows=1319 width=8) (actual time=0.015..0.118 rows=975.00 loops=1)
+                                Index Cond: (store_id = 43)
+                                Filter: (quantity_on_hand > 0)
+                                Rows Removed by Filter: 75
+                                Index Searches: 1
+                                Buffers: shared read=15
+Planning:
+  Buffers: shared hit=399 read=52
+Planning Time: 1.209 ms
+Execution Time: 10.740 ms
+=== R18 run 2 ===
+Sort  (cost=5655.29..5658.56 rows=1305 width=32) (actual time=2.805..2.820 rows=687.00 loops=1)
+  Sort Key: si.quantity_on_hand DESC
+  Sort Method: quicksort  Memory: 59kB
+  Buffers: shared hit=758
+  ->  Hash Right Anti Join  (cost=3416.07..5587.76 rows=1305 width=32) (actual time=2.701..2.736 rows=687.00 loops=1)
+        Hash Cond: (oi.product_id = si.product_id)
+        Buffers: shared hit=755
+        ->  Nested Loop  (cost=5.59..2137.50 rows=260 width=4) (actual time=0.023..0.334 rows=338.00 loops=1)
+              Buffers: shared hit=350
+              ->  Bitmap Heap Scan on orders o  (cost=5.16..281.64 rows=71 width=4) (actual time=0.015..0.070 rows=69.00 loops=1)
+                    Recheck Cond: ((store_id = 43) AND (placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone))
+                    Heap Blocks: exact=69
+                    Buffers: shared hit=73
+                    ->  Bitmap Index Scan on idx_orders_store_placed  (cost=0.00..5.14 rows=71 width=0) (actual time=0.009..0.009 rows=69.00 loops=1)
+                          Index Cond: ((store_id = 43) AND (placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone))
+                          Index Searches: 1
+                          Buffers: shared hit=4
+              ->  Index Only Scan using order_items_pkey on order_items oi  (cost=0.43..26.03 rows=11 width=8) (actual time=0.003..0.004 rows=4.90 loops=69)
+                    Index Cond: (order_id = o.order_id)
+                    Heap Fetches: 338
+                    Index Searches: 69
+                    Buffers: shared hit=277
+        ->  Hash  (cost=3393.99..3393.99 rows=1319 width=36) (actual time=2.340..2.340 rows=975.00 loops=1)
+              Buckets: 2048  Batches: 1  Memory Usage: 82kB
+              Buffers: shared hit=405
+              ->  Hash Join  (cost=2625.22..3393.99 rows=1319 width=36) (actual time=0.178..2.275 rows=975.00 loops=1)
+                    Hash Cond: (p.product_id = si.product_id)
+                    Buffers: shared hit=405
+                    ->  Seq Scan on products p  (cost=0.00..690.00 rows=30000 width=28) (actual time=0.004..0.999 rows=30000.00 loops=1)
+                          Buffers: shared hit=390
+                    ->  Hash  (cost=2608.74..2608.74 rows=1319 width=8) (actual time=0.168..0.168 rows=975.00 loops=1)
+                          Buckets: 2048  Batches: 1  Memory Usage: 55kB
+                          Buffers: shared hit=15
+                          ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.43..2608.74 rows=1319 width=8) (actual time=0.008..0.089 rows=975.00 loops=1)
+                                Index Cond: (store_id = 43)
+                                Filter: (quantity_on_hand > 0)
+                                Rows Removed by Filter: 75
+                                Index Searches: 1
+                                Buffers: shared hit=15
+Planning:
+  Buffers: shared hit=451
+Planning Time: 0.925 ms
+Execution Time: 2.862 ms
+=== R18 run 3 ===
+Sort  (cost=5655.29..5658.56 rows=1305 width=32) (actual time=3.028..3.046 rows=687.00 loops=1)
+  Sort Key: si.quantity_on_hand DESC
+  Sort Method: quicksort  Memory: 59kB
+  Buffers: shared hit=758
+  ->  Hash Right Anti Join  (cost=3416.07..5587.76 rows=1305 width=32) (actual time=2.916..2.956 rows=687.00 loops=1)
+        Hash Cond: (oi.product_id = si.product_id)
+        Buffers: shared hit=755
+        ->  Nested Loop  (cost=5.59..2137.50 rows=260 width=4) (actual time=0.029..0.361 rows=338.00 loops=1)
+              Buffers: shared hit=350
+              ->  Bitmap Heap Scan on orders o  (cost=5.16..281.64 rows=71 width=4) (actual time=0.019..0.079 rows=69.00 loops=1)
+                    Recheck Cond: ((store_id = 43) AND (placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone))
+                    Heap Blocks: exact=69
+                    Buffers: shared hit=73
+                    ->  Bitmap Index Scan on idx_orders_store_placed  (cost=0.00..5.14 rows=71 width=0) (actual time=0.011..0.012 rows=69.00 loops=1)
+                          Index Cond: ((store_id = 43) AND (placed_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone))
+                          Index Searches: 1
+                          Buffers: shared hit=4
+              ->  Index Only Scan using order_items_pkey on order_items oi  (cost=0.43..26.03 rows=11 width=8) (actual time=0.003..0.004 rows=4.90 loops=69)
+                    Index Cond: (order_id = o.order_id)
+                    Heap Fetches: 338
+                    Index Searches: 69
+                    Buffers: shared hit=277
+        ->  Hash  (cost=3393.99..3393.99 rows=1319 width=36) (actual time=2.525..2.525 rows=975.00 loops=1)
+              Buckets: 2048  Batches: 1  Memory Usage: 82kB
+              Buffers: shared hit=405
+              ->  Hash Join  (cost=2625.22..3393.99 rows=1319 width=36) (actual time=0.151..2.446 rows=975.00 loops=1)
+                    Hash Cond: (p.product_id = si.product_id)
+                    Buffers: shared hit=405
+                    ->  Seq Scan on products p  (cost=0.00..690.00 rows=30000 width=28) (actual time=0.004..1.098 rows=30000.00 loops=1)
+                          Buffers: shared hit=390
+                    ->  Hash  (cost=2608.74..2608.74 rows=1319 width=8) (actual time=0.141..0.141 rows=975.00 loops=1)
+                          Buckets: 2048  Batches: 1  Memory Usage: 55kB
+                          Buffers: shared hit=15
+                          ->  Index Scan using store_inventory_pkey on store_inventory si  (cost=0.43..2608.74 rows=1319 width=8) (actual time=0.008..0.095 rows=975.00 loops=1)
+                                Index Cond: (store_id = 43)
+                                Filter: (quantity_on_hand > 0)
+                                Rows Removed by Filter: 75
+                                Index Searches: 1
+                                Buffers: shared hit=15
+Planning:
+  Buffers: shared hit=451
+Planning Time: 0.977 ms
+Execution Time: 3.090 ms
